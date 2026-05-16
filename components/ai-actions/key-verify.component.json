@@ -1,0 +1,69 @@
+{
+  "name": "key-verify",
+  "type": "ai-action",
+  "summary": "Verifies that a user's API key actually works against the provider's chat-completion endpoint. Performs a real round-trip with a 1-token request. Four supported test methods: 'gemini' (key in URL), 'claude' (x-api-key headers + anthropic-dangerous-direct-browser-access), 'cohere' (Bearer + v2 endpoint), 'openai' (Bearer, default — used by 11 of 14 catalog providers).",
+  "entry": "verifyApiKey + quickTestConnection",
+  "source": "src/20-part2a/up-part2a.js:386 (buildTestRequest), :440 (verifyApiKey), :482 (quickTestConnection)",
+  "triggers": [
+    "Click [data-action='verify-key'] in the provider config modal (Part 2A §5)",
+    "Click [data-action='quick-test'] on a provider card (Part 2A inline)",
+    "Click [data-action='test-all-connections'] in the Providers view (Part 2A bulk)"
+  ],
+  "reads": {
+    "state": [
+      "S.providerMap[providerId]",
+      "S.providerMap[providerId].api_key",
+      "Constants.MODEL_CATALOG[providerId].test_endpoint",
+      "Constants.MODEL_CATALOG[providerId].test_method"
+    ],
+    "dom": ["#upProviderKey value", "#upVerifyStatus container"],
+    "network": [
+      "POST <test_endpoint> with provider-specific headers + body"
+    ]
+  },
+  "writes": {
+    "state": [
+      "S.providerMap[providerId].key_verified (boolean)",
+      "S.providerMap[providerId].key_verified_at (ISO timestamp)",
+      "S.providerMap[providerId].enabled (set to true on FIRST successful verify only)"
+    ],
+    "dom": [
+      "#upVerifyStatus alert HTML (success | error)",
+      "Provider card badge updates on bulk/quick path"
+    ],
+    "network": []
+  },
+  "produces_html": false,
+  "network_contract": {
+    "method": "POST",
+    "endpoint_pattern": "<provider-specific, from MODEL_CATALOG.test_endpoint>",
+    "headers": {
+      "gemini": "Query param ?key=<key>",
+      "claude": "x-api-key, anthropic-version, anthropic-dangerous-direct-browser-access",
+      "cohere": "Authorization: Bearer <key> (v2 endpoint)",
+      "openai": "Authorization: Bearer <key> (default fallback)"
+    },
+    "body_shape": "Minimal 1-message chat request with max_tokens=1 (or generationConfig.maxOutputTokens=1 for gemini)",
+    "response_shape": "Provider-specific; success = HTTP 2xx regardless of body. Failure = HTTP 4xx/5xx or fetch error."
+  },
+  "failure_modes": [
+    {
+      "scenario": "CORS blocked by provider",
+      "handling": "fetch() rejects; error toast shown; key_verified stays false. Anthropic specifically requires anthropic-dangerous-direct-browser-access: true to opt in."
+    },
+    {
+      "scenario": "Invalid key",
+      "handling": "HTTP 401/403; onVerifyFailure() called with the response message; key_verified flipped to false; logActivity('key-failed', ...)"
+    },
+    {
+      "scenario": "Provider down / network error",
+      "handling": "Error toast; key_verified untouched (preserves last-known-good state). Logs to console with [UP] prefix."
+    },
+    {
+      "scenario": "Rate-limit (429)",
+      "handling": "Treated as failure; toast suggests retry. No automatic backoff."
+    }
+  ],
+  "tags": ["ai-action", "verification", "fetch", "cors", "api-key"],
+  "related": ["providers", "live-refresh"]
+}

@@ -153,6 +153,49 @@ source changes. The parse-check catches syntax errors that
 TypeScript-style tools would otherwise find — this codebase has no test
 suite.
 
+`npm run build` runs two scripts:
+
+1. `scripts/build.mjs` — concatenates `src/` → `dist/up.{js,css}`.
+2. `scripts/build-component-index.mjs` — walks `components/**/*.component.json`
+   and regenerates `docs/COMPONENT-INDEX.md`. Output is deterministic
+   (no timestamps in the file content), so unchanged inputs produce a
+   byte-identical file — safe to chain.
+
+`npm run build:bundle` and `npm run build:index` run them separately.
+
+## Component schemas
+
+Every view, AI action, and data-export has a sibling
+`<name>.component.json` under `components/`. These schemas are the
+authoritative map of "what this app does" for AI agents reading the
+codebase. Schema is informal (no validator), but the convention is:
+
+```json
+{
+  "name": "<short-id>",
+  "type": "view" | "ai-action" | "data-export",
+  "summary": "<one to three sentences>",
+  "entry": "<function name to grep for>",
+  "source": "<path:line>",
+  "triggers": [...],
+  "reads":  { "state": [...], "dom": [...], "network": [...] },
+  "writes": { "state": [...], "dom": [...], "network": [...] },
+  "produces_html": true | false,
+  "network_contract": { ... },         // ai-actions only
+  "output_contract":  { ... },         // data-exports only
+  "failure_modes": [{ "scenario": "...", "handling": "..." }],
+  "tags": [...],
+  "related": [...]
+}
+```
+
+When you add a renderer, AI action, or data export to `src/`, add the
+matching `.component.json` in the same PR. When you modify behavior
+that changes triggers, inputs, outputs, or failure modes, update the
+schema in the same PR. The generator catches stale schemas only
+indirectly (the index will be out of sync with reality), so doc-sync is
+a developer discipline, not an enforced gate.
+
 ## Doc sync
 
 When a phase introduces a behavior change, naming change, or trigger

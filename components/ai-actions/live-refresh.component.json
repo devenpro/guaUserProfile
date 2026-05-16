@@ -1,0 +1,70 @@
+{
+  "name": "live-refresh",
+  "type": "ai-action",
+  "summary": "Discovers a provider's currently available models by calling its /v1/models endpoint, parsing the result, and merging new model IDs into S.data.providers[i].models[] with source='live_refresh' and active=false (user must explicitly enable them). Supports 8 of the 14 catalog providers (openai, groq, mistral, together, openrouter, nvidia, deepseek, perplexity). The other 6 + custom providers without an endpoint show an info toast and no-op.",
+  "entry": "liveRefreshModels",
+  "source": "src/30-part2b/up-part2b.js:99",
+  "triggers": [
+    "Click [data-action='live-refresh'] in the Models view (per-provider button)",
+    "Click [data-action='live-refresh-modal'] in the provider config modal"
+  ],
+  "reads": {
+    "state": [
+      "S.providerMap[providerId]",
+      "S.providerMap[providerId].api_key",
+      "S.providerMap[providerId].key_verified",
+      "MODEL_LIST_ENDPOINTS[providerId] (local const in Part 2B §2)"
+    ],
+    "dom": [],
+    "network": [
+      "GET <MODEL_LIST_ENDPOINTS[providerId].url> with Bearer auth (or none for openrouter)"
+    ]
+  },
+  "writes": {
+    "state": [
+      "S.providerMap[providerId].models[] (merge-only — never deletes existing models)",
+      "S.providerMap[providerId].last_live_refresh (ISO timestamp)",
+      "S.data.activity[] (model-toggled entry on each newly-added model)"
+    ],
+    "dom": ["Refresh button spinner state on the originating control"],
+    "network": []
+  },
+  "produces_html": false,
+  "network_contract": {
+    "method": "GET",
+    "endpoint_pattern": "https://<provider-host>/v1/models (varies by provider)",
+    "headers": {
+      "default": "Authorization: Bearer <api_key>",
+      "openrouter": "(no auth required; HTTP-Referer header added)"
+    },
+    "response_parsers": {
+      "openai": "Reads data.data[].id and data.data[].name. Filters out embedding/moderation/tts/whisper/dall-e/audio models by ID substring.",
+      "openrouter": "Reads data.data[].id and data.data[].name. No filter."
+    },
+    "category_guessing": "guessCategory() heuristic: keywords 'opus|pro|large|405b|grok-3|r1|o3|o1|deep-research' → powerful; 'mini|nano|flash|lite|8b|small|haiku|instant' → fast; everything else → balanced."
+  },
+  "failure_modes": [
+    {
+      "scenario": "Provider not in MODEL_LIST_ENDPOINTS (e.g., claude, gemini, github, cohere, huggingface, grok)",
+      "handling": "Info toast: '<provider> does not support live model refresh. Using catalog models.' No-op."
+    },
+    {
+      "scenario": "key_verified is false or api_key is empty",
+      "handling": "Warning toast: 'Provider not configured or key not verified'. No-op."
+    },
+    {
+      "scenario": "Network error / 4xx / 5xx",
+      "handling": "Error toast with the message; refresh button re-enabled; existing models[] preserved (never destructive)."
+    },
+    {
+      "scenario": "Parser returns empty list",
+      "handling": "Toast: 'Catalog up to date' (treated as success — no new models found)."
+    },
+    {
+      "scenario": "API returns models with duplicate IDs",
+      "handling": "mergeDiscoveredModels() skips duplicates by ID (existing entry wins; its active/is_default/temperature etc. are preserved)."
+    }
+  ],
+  "tags": ["ai-action", "discovery", "fetch", "models-api", "merge"],
+  "related": ["models", "key-verify", "llm-config"]
+}

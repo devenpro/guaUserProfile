@@ -1,0 +1,70 @@
+{
+  "name": "llm-config",
+  "type": "data-export",
+  "summary": "Builds the clean LLM configuration object that gets written to field_llm_config. This is the contract every other GoUltra AI app depends on — they read it from a .llm-config-data div Drupal renders into the page. Inclusion rule: a provider is included only if enabled && key_verified && api_key, AND it has at least one model with active=true. A model is included only if active=true. Sensitive working fields are stripped.",
+  "entry": "buildLLMConfig",
+  "source": "src/10-part1/up-part1.js:484",
+  "triggers": [
+    "syncToTextarea() — called on every state mutation (save flow step 5)",
+    "Auto-save loop (every 30s when S.dirty=true)",
+    "User clicks Save button [data-action='save']",
+    "Ctrl+S keyboard shortcut",
+    "Live-refresh completion",
+    "Provider config modal save"
+  ],
+  "reads": {
+    "state": [
+      "S.data.providers (entire array)",
+      "S.data.default_provider",
+      "S.data.default_model"
+    ],
+    "dom": [],
+    "network": []
+  },
+  "writes": {
+    "state": [],
+    "dom": ["field_llm_config textarea value (via syncToTextarea)"],
+    "network": []
+  },
+  "produces_html": false,
+  "output_contract": {
+    "shape": {
+      "providers": "Array<{id, label, active, api_key, models: Array<{id, label, active, is_default, temperature, max_tokens, top_p}>}>",
+      "default_provider": "string (provider id) or empty string",
+      "default_model": "string (model id) or empty string"
+    },
+    "stripped_fields": [
+      "key_verified",
+      "key_verified_at",
+      "category",
+      "source",
+      "enabled",
+      "last_live_refresh",
+      "custom",
+      "test_endpoint",
+      "test_method",
+      "color",
+      "activity (entire array)",
+      "preferences (entire object)"
+    ],
+    "consumers": "Every other app on the GoUltra AI platform. Listed in docs/PROJECT.md.",
+    "spec_doc": "docs/ARCHITECTURE.md §4"
+  },
+  "failure_modes": [
+    {
+      "scenario": "S.data.providers is null or not an array",
+      "handling": "Returns { providers: [], default_provider: '', default_model: '' } — consumers see empty config, which is the safe default"
+    },
+    {
+      "scenario": "A provider with key_verified=true but enabled=false",
+      "handling": "Excluded from export. Consumers do not see the provider until enabled is also true."
+    },
+    {
+      "scenario": "default_provider points at a provider that fails the inclusion rule",
+      "handling": "default_provider is still emitted as-is; consumers must validate against their parsed providers list. Future improvement: nullify default_provider in this case."
+    }
+  ],
+  "tags": ["data-export", "contract", "platform-critical", "field-llm-config"],
+  "breaking_change_warning": "Any change to the output shape is a breaking change for EVERY OTHER APP on the platform. See CLAUDE.md 'What Claude will not do' list.",
+  "related": ["providers", "models", "key-verify"]
+}

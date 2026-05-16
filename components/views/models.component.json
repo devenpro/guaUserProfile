@@ -1,0 +1,42 @@
+{
+  "name": "models",
+  "type": "view",
+  "summary": "Renders the #models hash route. Per-provider model tables with active toggle, default-star, category pill (fast/balanced/powerful), temperature & token display, fuzzy search across all models, bulk enable/disable per provider, and a live-refresh button for providers that expose /v1/models. Profile-level default-provider selector at the bottom.",
+  "entry": "renderModels",
+  "source": "src/10-part1/up-part1.js:1005",
+  "triggers": [
+    "navigate('models')",
+    "hashchange to #models",
+    "Part-2A renderer override via window._upRenderers.models (currently no override registered)"
+  ],
+  "reads": {
+    "state": [
+      "S.data.providers",
+      "S.providerMap",
+      "S.modelSearch",
+      "S.data.default_provider",
+      "S.data.default_model",
+      "Constants.MODEL_LIST_ENDPOINTS"
+    ],
+    "dom": [],
+    "network": []
+  },
+  "writes": {
+    "state": [],
+    "dom": ["#upContent innerHTML"],
+    "network": []
+  },
+  "produces_html": true,
+  "failure_modes": [
+    {
+      "scenario": "Provider has zero models after live-refresh (API returned empty list)",
+      "handling": "Empty-state row rendered with a hint to re-run live-refresh or re-enable catalog seed"
+    },
+    {
+      "scenario": "Search debounce loses cursor position",
+      "handling": "Existing setSelectionRange() restores cursor after re-render (in setupEventHandlers, not in renderer)"
+    }
+  ],
+  "tags": ["view", "models", "search", "bulk-toggle", "live-refresh", "default-model"],
+  "related": ["dashboard", "providers", "live-refresh"]
+}
