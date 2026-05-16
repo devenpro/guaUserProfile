@@ -1,6 +1,6 @@
-/* User Profile v0.1.3 · built 2026-05-16T14:10:42.328Z · 34 source files (see src/) */
-window.UP_VERSION = "0.1.3";
-window.UP_BUILD_TIME = "2026-05-16T14:10:42.328Z";
+/* User Profile v0.1.4 · built 2026-05-16T14:13:26.692Z · 34 source files (see src/) */
+window.UP_VERSION = "0.1.4";
+window.UP_BUILD_TIME = "2026-05-16T14:13:26.692Z";
 
 /* ===== src/10-part1/00-header.js ===== */
 /**
