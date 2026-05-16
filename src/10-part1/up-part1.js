@@ -31,6 +31,11 @@
 (function($, Drupal) {
   'use strict';
 
+  // Version banner — first line in the console on every page load.
+  // Reads window.UP_VERSION / window.UP_BUILD_TIME set by the build prologue
+  // in dist/up.js. Falls back to 'dev' when running unbundled source.
+  console.log('[UP] User Profile v' + (window.UP_VERSION || 'dev') + (window.UP_BUILD_TIME ? ' · built ' + window.UP_BUILD_TIME : ''));
+
   window._upRenderers = window._upRenderers || {};
 
   // ============================================================

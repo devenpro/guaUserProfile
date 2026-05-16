@@ -42,24 +42,59 @@ The build is a simple alphabetical-walk concatenation — no bundler, no plugins
 
 ## How Drupal loads this
 
-Configured via the Asset Injector module on the Drupal site. Each asset is conditioned on body class `node--type-user-profile`.
-
-Once a CI release pipeline (`.github/workflows/release.yml`) is in place and the first `vX.Y.Z` tag exists, the recommended URL pattern is:
+Configured via the Asset Injector module on the Drupal site. The Drupal admin points two External rules at jsDelivr URLs, both conditioned on body class `node--type-user-profile`. Pick one of three stability levels:
 
 | Mode | URL pattern | Notes |
 | --- | --- | --- |
-| **Production** | `…@latest/dist/up.{js,css}` | jsDelivr resolves `@latest` to the highest semver tag. |
-| **Pinned** (for rollback) | `…@vX.Y.Z/dist/up.{js,css}` | Tag URLs are immutable. Use during incident response. |
-| **Bleeding edge** | `…@main/dist/up.{js,css}` | Follows the branch tip. Mutable; jsDelivr caches it ~12 h. |
+| **Production** (recommended) | `…@latest/dist/up.{js,css}` | jsDelivr resolves `@latest` to the highest semver tag. CI auto-tags every push to `main`, so the live page picks up new releases automatically. |
+| **Pinned** (for rollback) | `…@vX.Y.Z/dist/up.{js,css}` | Tag URLs are immutable. Use during incident response when you need to freeze the live page on a known-good release. |
+| **Bleeding edge** | `…@main/dist/up.{js,css}` | Follows the branch tip. Mutable; jsDelivr caches it ~12 h. Use only for short-lived hotfixes before a release exists. |
 
-Full URL once `@latest` is wired up:
+Full URL for production:
 
 ```
 https://cdn.jsdelivr.net/gh/devenpro/guaUserProfile@latest/dist/up.js
 https://cdn.jsdelivr.net/gh/devenpro/guaUserProfile@latest/dist/up.css
 ```
 
-Until then, point Asset Injector at `@main` (bleeding edge) and rebuild + push manually for each change. The Operations layer roadmap is in [`CLAUDE.md`](CLAUDE.md) under "Phase A".
+### Deploy flow
+
+1. Edit a file under `src/`.
+2. `node scripts/build.mjs` to rebuild `dist/up.js` and `dist/up.css` locally (so reviewers can see the diff).
+3. Open a PR, merge to `main`.
+4. The `Release` GitHub Action (`.github/workflows/release.yml`) bumps `package.json` patch, rebuilds, commits as `[release] vX.Y.Z`, tags, publishes a GitHub Release, and purges the jsDelivr `@latest`/`@main` cache. Tag-to-release wall time is ~13s.
+5. Asset Injector at `@latest` picks up the new release within a minute (after Drupal/browser caches expire — see Troubleshooting below).
+
+The running bundle prints its version to the browser console on load:
+
+```
+[UP] User Profile v0.1.0 · built 2026-05-16T11:04:27.423Z
+```
+
+### Rollback in 30 seconds
+
+1. Open Asset Injector. Change the JS and CSS External URLs from `@latest` to the previous good tag, e.g. `@v0.1.6`.
+2. Save. Clear all Drupal caches (Configuration → Performance → Clear all caches).
+3. Hard-refresh the page. The console banner should now read the pinned tag.
+
+Available tags: <https://github.com/devenpro/guaUserProfile/tags>.
+
+When the fix lands and a new tag is cut, switch Asset Injector back to `@latest`.
+
+## Troubleshooting
+
+### "The page is blank after a deploy"
+
+Use the console banner to pinpoint which layer is wrong. Open DevTools (F12) → Console.
+
+1. **No `[UP] User Profile v…` line at all.** The bundle didn't execute. Open the Network tab, find the `up.js` request, click into Response. Common causes: 404 (Asset Injector URL is wrong), syntax error from a half-built bundle, or a CSP blocking jsDelivr.
+2. **Banner shows an older version than expected.** It's a cache. In order:
+   - Browser: hard-refresh (Ctrl+Shift+R / Cmd+Shift+R).
+   - jsDelivr (if you must — `@latest` resolves instantly to new tags, but you can purge anyway):
+     `https://purge.jsdelivr.net/gh/devenpro/guaUserProfile@latest/dist/up.js`
+     `https://purge.jsdelivr.net/gh/devenpro/guaUserProfile@latest/dist/up.css`
+   - Drupal: Configuration → Performance → Clear all caches.
+3. **Banner shows the right version, but the UI is blank.** It's a runtime bug, not a delivery problem. Look for `[UP] Could not find Drupal form fields` or other `[UP]` errors in the console. Until the source is fixed, pin Asset Injector to the previous `@vX.Y.Z` tag (see "Rollback in 30 seconds" above).
 
 ## Concatenation order
 

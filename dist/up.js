@@ -1,6 +1,6 @@
-/* User Profile v0.1.0 · built 2026-05-16T11:04:27.423Z · 3 source files (see src/) */
+/* User Profile v0.1.0 · built 2026-05-16T11:17:53.799Z · 3 source files (see src/) */
 window.UP_VERSION = "0.1.0";
-window.UP_BUILD_TIME = "2026-05-16T11:04:27.423Z";
+window.UP_BUILD_TIME = "2026-05-16T11:17:53.799Z";
 
 /* ===== src/10-part1/up-part1.js ===== */
 /**
@@ -35,6 +35,11 @@ window.UP_BUILD_TIME = "2026-05-16T11:04:27.423Z";
  */
 (function($, Drupal) {
   'use strict';
+
+  // Version banner — first line in the console on every page load.
+  // Reads window.UP_VERSION / window.UP_BUILD_TIME set by the build prologue
+  // in dist/up.js. Falls back to 'dev' when running unbundled source.
+  console.log('[UP] User Profile v' + (window.UP_VERSION || 'dev') + (window.UP_BUILD_TIME ? ' · built ' + window.UP_BUILD_TIME : ''));
 
   window._upRenderers = window._upRenderers || {};
 
