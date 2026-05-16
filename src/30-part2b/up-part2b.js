@@ -69,8 +69,12 @@
     openConfirmDialog = P2A.openConfirmDialog;
     closeConfirmDialog = P2A.closeConfirmDialog;
 
-    setupPart2BEvents();
-    setupKeyboardShortcuts();
+    // Wrap handler-setup so a failure in one block does not disable the
+    // other. _upSafeBlock is exposed by Part 1; fallback defined inline
+    // in case Part 1 ever ships without it.
+    var safeBlock = window._upSafeBlock || function(n, f) { try { f(); } catch (e) { console.error('[UP] Handler block "' + n + '" failed:', e); } };
+    safeBlock('part2b-events', setupPart2BEvents);
+    safeBlock('part2b-shortcuts', setupKeyboardShortcuts);
 
     if (render) render();
     console.log('[UP] Part 2B initialized');

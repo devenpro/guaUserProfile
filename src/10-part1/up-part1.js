@@ -282,6 +282,17 @@
     }
   };
 
+  // window.load fallback — fires after Drupal.behaviors should have attached.
+  // On some Drupal configurations the behavior attach is delayed or skipped
+  // (asset aggregation edge cases, lazy-loaded jQuery, etc.); this catches
+  // those cases by re-trying init() once the document is fully loaded.
+  $(window).on('load.up-fallback', function() {
+    if (!S.initialized && !S._initializing && isUPPage()) {
+      console.log('[UP] window.load fallback firing init()');
+      init();
+    }
+  });
+
   function init() {
     if (S._initializing || S.initialized) return;
     S._initializing = true;
@@ -296,9 +307,9 @@
     loadData();
     migrateData();
     buildMaps();
-    renderApp();
-    setupEventHandlers();
-    startAutoSave();
+    _safeBlock('part1-render-app', renderApp);
+    _safeBlock('part1-events', setupEventHandlers);
+    _safeBlock('part1-auto-save', startAutoSave);
 
     S.initialized = true;
     S._initializing = false;
@@ -337,9 +348,13 @@
   }
 
   function loadData() {
-    // Parse data field
+    // Parse data field. Capture _rawDataEmpty BEFORE any parse / migration
+    // so downstream code (e.g., a future setup wizard) can tell "was this
+    // textarea blank when the page loaded?" without being fooled by
+    // migrateData() backfilling defaults into S.data.
     var rawData = S.$textarea.val();
-    if (rawData && rawData.trim()) {
+    S._rawDataEmpty = !rawData || !rawData.trim();
+    if (!S._rawDataEmpty) {
       try { S.data = JSON.parse(rawData); }
       catch (e) { console.error('[UP] JSON data parse error:', e); S.data = getDefaultData(); }
     } else {
@@ -547,26 +562,52 @@
     var R = window._upRenderers;
     var html = '';
 
-    switch (S.currentView) {
-      case 'dashboard':  html = renderDashboard(); break;
-      case 'providers':  html = R.providers ? R.providers() : renderProviders(); break;
-      case 'models':     html = R.models ? R.models() : renderModels(); break;
-      default:           html = renderDashboard(); break;
+    // Error boundary: any throw inside a view renderer is caught here and
+    // replaced with a visible crash card. Without this, an exception leaves
+    // #upContent blank with no on-screen signal — silent failure mode that
+    // is especially dangerous for a producer app whose output is consumed
+    // by every other app on the platform.
+    try {
+      switch (S.currentView) {
+        case 'dashboard':  html = renderDashboard(); break;
+        case 'providers':  html = R.providers ? R.providers() : renderProviders(); break;
+        case 'models':     html = R.models ? R.models() : renderModels(); break;
+        default:           html = renderDashboard(); break;
+      }
+      $c.html(html);
+
+      // Call view-specific event setup if registered
+      if (S.currentView === 'providers' && R.setupProvidersEvents) R.setupProvidersEvents();
+      if (S.currentView === 'models' && R.setupModelsEvents) R.setupModelsEvents();
+    } catch (err) {
+      console.error('[UP] renderCurrentView crashed for view "' + S.currentView + '":', err);
+      $c.html(renderCrashCard(S.currentView, err));
     }
 
-    $c.html(html);
-
-    // Call view-specific event setup if registered
-    if (S.currentView === 'providers' && R.setupProvidersEvents) R.setupProvidersEvents();
-    if (S.currentView === 'models' && R.setupModelsEvents) R.setupModelsEvents();
-
-    // Update nav active state
+    // Update nav active state (always runs, even after a crash, so the
+    // sidebar reflects the requested view).
     $('.up-nav-item').removeClass('up-nav-item-active');
     $('.up-nav-item[data-view="' + S.currentView + '"]').addClass('up-nav-item-active');
 
-    // Update nav badges
-    $('.up-nav-badge-providers').text(S.exportableCount + '/' + PROVIDER_ORDER.length);
-    $('.up-nav-badge-models').text(S.totalActiveModels);
+    // Update nav badges (defensively wrapped — counts may be stale if a
+    // render path crashed mid-update, but the badges should still refresh
+    // safely from S on the next successful render).
+    try {
+      $('.up-nav-badge-providers').text(S.exportableCount + '/' + PROVIDER_ORDER.length);
+      $('.up-nav-badge-models').text(S.totalActiveModels);
+    } catch (e) { /* swallow — badges are cosmetic */ }
+  }
+
+  function renderCrashCard(viewName, err) {
+    var msg = (err && err.message) ? err.message : String(err);
+    var stack = (err && err.stack) ? err.stack : '(no stack available)';
+    return '<div class="up-crash-card" role="alert">' +
+      '<div class="up-crash-card-icon">' + icon('triangle-exclamation') + '</div>' +
+      '<h3 class="up-crash-card-title">View "' + esc(viewName) + '" failed to render</h3>' +
+      '<p class="up-crash-card-msg">' + esc(msg) + '</p>' +
+      '<details class="up-crash-card-stack"><summary>Stack trace</summary><pre>' + esc(stack) + '</pre></details>' +
+      '<p class="up-crash-card-action">Try switching views, or refresh the page. Share the stack trace with the dev.</p>' +
+    '</div>';
   }
 
   // ============================================================
@@ -704,6 +745,15 @@
     if (f === 'unconfigured') return providers.filter(function(p) { return !p.api_key || p.api_key.length === 0; });
     if (f === 'major' || f === 'infra') return providers.filter(function(p) { return p.category === f; });
     return providers;
+  }
+
+  // Resilience helper: runs `fn()` in a try/catch and logs failures with a
+  // named tag. Used at init() phase boundaries and by Part 2A/2B (via
+  // window._upSafeBlock) so a single island's collapse does not disable
+  // the rest of the app.
+  function _safeBlock(name, fn) {
+    try { fn(); }
+    catch (e) { console.error('[UP] Handler block "' + name + '" failed:', e); }
   }
 
   // ============================================================
@@ -1377,6 +1427,8 @@
   window._upSyncToTextarea = syncToTextarea;
   window._upUpdateSaveStatus = updateSaveStatus;
   window._upLogActivity = logActivity;
+  // Resilience seam used by Part 2A/2B handler-setup wrappers
+  window._upSafeBlock = _safeBlock;
   window._upBuildLLMConfig = buildLLMConfig;
   // Utilities
   window._upEsc = esc;
