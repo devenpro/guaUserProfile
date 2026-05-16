@@ -73,7 +73,11 @@
     R.openProviderModal = openProviderModal;
     R.openAddCustomProviderModal = openAddCustomProviderModal;
 
-    setupPart2AEvents();
+    // Wrap handler-setup so a failure here does not cascade into Part 2B.
+    // _upSafeBlock is exposed by Part 1; fallback defined inline in case
+    // Part 1 ever ships without it.
+    var safeBlock = window._upSafeBlock || function(n, f) { try { f(); } catch (e) { console.error('[UP] Handler block "' + n + '" failed:', e); } };
+    safeBlock('part2a-events', setupPart2AEvents);
     snapshot('Initial state');
 
     if (render) render();

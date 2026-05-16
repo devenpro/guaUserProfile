@@ -1,4 +1,4 @@
-/* User Profile v0.1.1 · built 2026-05-16T14:04:46.380Z · 2 source files (see src/) */
+/* User Profile v0.1.1 · built 2026-05-16T14:06:52.377Z · 2 source files (see src/) */
 
 /* ===== src/styles/10-part1/up-part1.css ===== */
 /**
@@ -334,6 +334,24 @@ body.up-active .block-page-title-block { display: none !important; }
   .up-list-toolbar { gap: var(--up-space-1); }
   .up-filter-pill { padding: 3px 10px; font-size: 10px; }
 }
+
+/* S19: CRASH CARD (resilience boundary for renderCurrentView) */
+.up-crash-card {
+  background: var(--up-error-light);
+  border: 1px solid var(--up-error);
+  border-radius: var(--up-radius-lg);
+  padding: var(--up-space-6);
+  margin: var(--up-space-4);
+  color: var(--up-text-primary);
+  max-width: 720px;
+}
+.up-crash-card-icon { width: 40px; height: 40px; background: var(--up-error); color: var(--up-white); border-radius: var(--up-radius-md); display: flex; align-items: center; justify-content: center; font-size: var(--up-font-size-lg); margin-bottom: var(--up-space-3); }
+.up-crash-card-title { color: var(--up-error); font-size: var(--up-font-size-xl); margin-bottom: var(--up-space-2); }
+.up-crash-card-msg { font-family: var(--up-font-mono); font-size: var(--up-font-size-sm); margin-bottom: var(--up-space-3); word-break: break-word; }
+.up-crash-card-stack summary { cursor: pointer; font-size: var(--up-font-size-sm); font-weight: 600; color: var(--up-text-secondary); user-select: none; }
+.up-crash-card-stack summary:hover { color: var(--up-text-primary); }
+.up-crash-card-stack pre { font-family: var(--up-font-mono); font-size: var(--up-font-size-xs); background: var(--up-white); border: 1px solid var(--up-border-light); border-radius: var(--up-radius-sm); padding: var(--up-space-3); margin-top: var(--up-space-2); white-space: pre-wrap; word-break: break-word; max-height: 320px; overflow-y: auto; }
+.up-crash-card-action { font-size: var(--up-font-size-sm); color: var(--up-text-secondary); margin-top: var(--up-space-3); }
 
 /* ===== src/styles/20-part2/up-part2.css ===== */
 /**
