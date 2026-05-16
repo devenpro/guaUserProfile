@@ -8,10 +8,16 @@ apply without needing to be repeated each task.
 
 User Profile is a vanilla-JS + jQuery app embedded via Drupal's Asset
 Injector module on a `user_profile` content node. Source lives in
-`src/` (three IIFE parts: `10-part1`, `20-part2a`, `30-part2b`). The
-bundler at `scripts/build.mjs` concatenates every file under `src/` into
-`dist/up.js` + `dist/up.css`, which **are checked in**. Drupal loads
-the dist files from jsDelivr (or `@main` until Phase A wires up `@latest`).
+`src/` (three IIFE parts: `10-part1`, `20-part2a`, `30-part2b`). Each
+Part is a single IIFE distributed across numbered sub-files (Part 1:
+`00-header.js` → `15-exports.js`; Parts 2A/2B: `01-init.js` →
+`09-exports.js`). The bundler at `scripts/build.mjs` lex-concatenates
+every file under `src/` into `dist/up.js` + `dist/up.css`, which **are
+checked in**. Drupal loads the dist files from jsDelivr (or `@main`
+until Phase A wires up `@latest`). Individual source files are not
+standalone-valid JS — the IIFE open lives in the first file of each
+Part, the close lives in the last file, and everything between is
+free-floating code inside that IIFE scope.
 
 > **App-specific identity**
 >
@@ -244,10 +250,15 @@ Verbs: `fix`, `add`, `refactor`, `audit`, `remove`, `docs`.
 - **Skip `syncToTextarea()`** in any state-mutating code path.
 - **Add `.llm-config-data` or `.brand-data` parsing.** This app is the
   producer; it has no business consuming.
-- **Split the Part monoliths.** Splitting `src/10-part1/up-part1.js`,
-  `src/20-part2a/up-part2a.js`, or `src/30-part2b/up-part2b.js` into
-  smaller files is a dedicated session (Phase E), not a side-effect of
-  an unrelated change.
+- **Restructure the source-tree split without thinking it through.**
+  Each Part is a single IIFE distributed across numbered files. The
+  open paren (`(function($, Drupal) { 'use strict';`) lives in the
+  first file (`00-header.js` for Part 1, `01-init.js` for Parts
+  2A/2B); the close paren (`})(jQuery, Drupal);`) lives in the last
+  file (`15-exports.js` for Part 1, `09-exports.js` for Parts 2A/2B).
+  Adding, removing, or reordering files within a Part folder changes
+  concatenation order and can break the IIFE wrapping. Touch the split
+  structure only in a dedicated refactor session.
 - **Mirror state outside `S.data`.** All persisted state lives in
   `field_json_data` (via `S.data`); everything else (counts, maps,
   filters, lifecycle flags) is derived and rebuilt by `buildMaps()`.
@@ -274,6 +285,6 @@ Summary:
 - **Phase D — AI-friendliness layer.** `.component.json` schemas
   alongside renderers and AI actions; auto-generated
   `docs/COMPONENT-INDEX.md`.
-- **Phase E — Source-tree splitting.** Split each Part monolith into
-  numbered sub-files (`00-header.js`, `01-init.js`, etc.). Higher risk;
-  do not bundle with feature work.
+- ~~**Phase E — Source-tree splitting.**~~ Done. Each Part is now
+  distributed across numbered per-section files; see "Project
+  orientation" above for the file inventory.

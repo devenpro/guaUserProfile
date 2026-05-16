@@ -91,16 +91,69 @@ If Font Awesome is missing, icons silently fall back to empty `<i>` tags but lay
 
 ## File Inventory
 
-| File | Lines | Role |
-|------|-------|------|
-| `up-part1.css` | 334 | Design tokens, app shell, header, sidebar, all three views, toggles, toasts, 4 responsive breakpoints |
-| `up-part2.css` | 140 | Modals, confirm dialogs, configuration steps, model cards in modal, parameter controls, alerts |
-| `up-part1.js` | 1,403 | 15 sections: constants → state → init → maps → LLM config builder → navigation → utilities → app shell → 3 view renderers → events → sync/save → toasts → exports |
-| `up-part2a.js` | 1,150 | 9 sections: init → modal system → undo/redo → provider config modal (3-step) → key verification (4 methods) → save/remove → change default → add custom provider → events |
-| `up-part2b.js` | 684 | 9 sections: init → live model refresh → LLM config preview → import/export → bulk model ops → reset → keyboard shortcuts → events |
-| `up-sample-data.json` | — | Example `field_json_data` content with 5 verified providers + activity log |
-| `up-sample-llm-config.json` | — | Example `field_llm_config` content — the export contract consumer apps depend on |
-| **Total JS + CSS** | **~3,711** | |
+Source is split into per-section files under `src/`. Each Part is a single IIFE distributed across numbered files; the first file opens the IIFE, the last closes it. The bundler at `scripts/build.mjs` lex-concatenates them into `dist/up.{js,css}`.
+
+### CSS (`src/styles/`)
+
+| File | Role |
+|------|------|
+| `src/styles/10-part1/up-part1.css` | Design tokens, app shell, header, sidebar, all three views, toggles, toasts, crash card, 4 responsive breakpoints |
+| `src/styles/20-part2/up-part2.css` | Modals, confirm dialogs, configuration steps, model cards in modal, parameter controls, alerts |
+
+### Part 1 — Core engine (`src/10-part1/`, 16 files)
+
+| File | Role |
+|------|------|
+| `00-header.js` | IIFE open, version banner, `window._upRenderers` init |
+| `01-constants.js` | `APP_VIEWS`, `MODEL_CATALOG` (14 providers), `PROVIDER_ORDER`, `ACTIVITY_TYPES`, `CATEGORY_LABELS` |
+| `02-state.js` | The `S` state object |
+| `03-init.js` | `isUPPage`, `Drupal.behaviors.upPart1`, `window.load` fallback, `init`, `parseUserData`, `detectDrupalForm`, `loadData` (with `S._rawDataEmpty` capture), `getDefaultData`, `migrateData` |
+| `04-maps.js` | `buildMaps` (rebuilds `providerMap`, counts, `activeProviders`) |
+| `05-llm-config.js` | `buildLLMConfig` (the platform-critical export contract) |
+| `06-navigation.js` | `navigate`, `readHash`, `renderCurrentView` (with try/catch + crash card), `renderCrashCard` |
+| `07-utilities.js` | `esc`, `icon`, `deepClone`, `truncate`, `maskKey`, `debounce`, `isEmpty`, `formatDate`, `formatRelativeTime`, `generateId`, `getRecentActivity`, `getFilteredProviders`, `getProviderColor`, `categoryPill`, `_safeBlock` |
+| `08-app-shell.js` | `renderApp` — the top-level header / sidebar / content scaffold |
+| `09-dashboard.js` | `renderDashboard` |
+| `10-providers.js` | `renderProviders` |
+| `11-models.js` | `renderModels` |
+| `12-events.js` | `setupEventHandlers`, `startAutoSave` (13 delegated handlers + 30s auto-save) |
+| `13-sync-save.js` | `syncToTextarea` (the only writer of `field_llm_config`), `updateSaveStatus` |
+| `14-toast.js` | `toast` notifications |
+| `15-exports.js` | `window._up*` exports (incl. `window._upSafeBlock`), IIFE close |
+
+### Part 2A — Provider configuration engine (`src/20-part2a/`, 9 files)
+
+| File | Role |
+|------|------|
+| `01-init.js` | IIFE open, var declarations, polling guard (10s timeout), `initPart2A` (wraps `setupPart2AEvents` in `safeBlock`) |
+| `02-modal-system.js` | `openModal`, `closeModal`, `openConfirmDialog`, `closeConfirmDialog` |
+| `03-undo-redo.js` | `snapshot`, `undo`, `redo` (max 50 stack entries) |
+| `04-provider-modal.js` | `openProviderModal` (3-step flow: key → models → params) |
+| `05-key-verify.js` | `buildTestRequest`, `verifyApiKey`, `quickTestConnection`, `testAllConnections` (4 test methods) |
+| `06-provider-crud.js` | `saveProviderFromModal`, `removeProvider`, `openAddCustomProviderModal` |
+| `07-change-default.js` | `openChangeDefaultModal` and helpers |
+| `08-events.js` | `setupPart2AEvents` (14 delegated handlers for modal, verify, CRUD) |
+| `09-exports.js` | `window._upPart2A` registry, IIFE close |
+
+### Part 2B — Advanced features (`src/30-part2b/`, 9 files)
+
+| File | Role |
+|------|------|
+| `01-init.js` | IIFE open, var declarations, polling guard (15s timeout), `initPart2B` (wraps `setupPart2BEvents` and `setupKeyboardShortcuts` in `safeBlock`) |
+| `02-live-refresh.js` | `MODEL_LIST_ENDPOINTS`, `liveRefreshModels`, `parseModelList`, `guessCategory`, `mergeDiscoveredModels` (8 of 14 providers supported) |
+| `03-llm-config-preview.js` | `openLLMConfigPreview` modal |
+| `04-import-export.js` | `exportConfig`, `importConfig` (with key-masking option) |
+| `05-bulk-ops.js` | `enableAllModels`, `disableAllModels` per provider |
+| `06-reset.js` | `resetAllProviders`, `clearActivity` |
+| `07-shortcuts.js` | `setupKeyboardShortcuts` (Alt+1/2/3, Ctrl+Shift+E, Ctrl+S) |
+| `08-events.js` | `setupPart2BEvents` (8 delegated handlers) |
+| `09-exports.js` | `window._upPart2B` registry, IIFE close |
+
+Total: 36 source files. **Individual source files are not standalone-valid JS** — only the concatenated `dist/up.js` is. Linters run on individual files will complain; lint the bundle output if needed.
+
+### Auto-generated component index
+
+See [docs/COMPONENT-INDEX.md](COMPONENT-INDEX.md) for a machine-friendly map of the 6 logical components (3 views, 2 AI actions, 1 data export) keyed by `.component.json` schemas under `components/`.
 
 ---
 
