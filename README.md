@@ -104,15 +104,15 @@ Use the console banner to pinpoint which layer is wrong. Open DevTools (F12) →
 
 ## Concatenation order
 
-The walk order matches the original three monolithic files:
+The walk order matches the three original monolithic Parts, now split into per-section files:
 
-1. Everything in `src/10-part1/` (was `up-part1.js`)
-2. Everything in `src/20-part2a/` (was `up-part2a.js`)
-3. Everything in `src/30-part2b/` (was `up-part2b.js`)
+1. Everything in `src/10-part1/` (16 files: `00-header.js` → `15-exports.js`)
+2. Everything in `src/20-part2a/` (9 files: `01-init.js` → `09-exports.js`)
+3. Everything in `src/30-part2b/` (9 files: `01-init.js` → `09-exports.js`)
 
-In this initial import, each part folder contains exactly one file — the original monolith, unsplit. Future structural passes may split each into smaller numbered files (`00-header.js`, `01-init.js`, …); the build script doesn't care because it walks lex.
+Files concatenate in numeric order within each folder. Each Part is wrapped in its own IIFE: the first numbered file (`00-header.js` for Part 1, `01-init.js` for Parts 2A/2B) opens the IIFE with `(function($, Drupal) { 'use strict';`, and the final numbered file in each Part (`15-exports.js` for Part 1, `09-exports.js` for Parts 2A/2B) closes it with `})(jQuery, Drupal);`. Part 2A polls for Part 1's globals before initializing; Part 2B polls for Part 2A. Both have 10s / 15s timeouts that log a `[UP]` console error on failure.
 
-Each Part is wrapped in its own IIFE: `(function($, Drupal) { 'use strict';` at the top and `})(jQuery, Drupal);` at the bottom of the file. Part 2A polls for Part 1's globals before initializing; Part 2B polls for Part 2A. Both have 10s / 15s timeouts that log a `[UP]` console error on failure.
+This means individual source files are **not** standalone-valid JS (they have unbalanced braces by design). Only the concatenated `dist/up.js` is valid. Linters run against individual source files will complain — that's expected; lint the build output if needed. To reorder, rename a file's numeric prefix.
 
 ## Drupal setup quick reference
 
