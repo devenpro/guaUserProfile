@@ -1,0 +1,10 @@
+{
+  "name": "gua-user-profile",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Drupal 11 add-on: user AI provider configuration. Producer of field_llm_config consumed by every other GoUltra AI app. Vanilla JS/CSS, concatenated build, served via jsDelivr.",
+  "scripts": {
+    "build": "node scripts/build.mjs"
+  }
+}

@@ -1,0 +1,139 @@
+/**
+ * User Profile App v1.0 - Part 2: Modals & Configuration Styles
+ * Prefix: up- | 12 sections
+ * @version 1.0.0
+ */
+
+/* S1: MODALS */
+.up-modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 1000; display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity var(--up-transition-base); backdrop-filter: blur(2px); }
+.up-modal-backdrop.up-modal-visible { opacity: 1; }
+.up-modal { background: var(--up-white); border-radius: var(--up-radius-lg); box-shadow: var(--up-shadow-xl); width: 90%; max-height: 85vh; display: flex; flex-direction: column; overflow: hidden; transform: translateY(10px); transition: transform var(--up-transition-base); }
+.up-modal-visible .up-modal { transform: translateY(0); }
+.up-modal-sm { max-width: 420px; }
+.up-modal-md { max-width: 560px; }
+.up-modal-lg { max-width: 640px; }
+.up-modal-header { display: flex; align-items: center; gap: var(--up-space-3); padding: var(--up-space-4) var(--up-space-5); border-bottom: 1px solid var(--up-border-light); }
+.up-modal-header-icon { width: 36px; height: 36px; border-radius: var(--up-radius-md); display: flex; align-items: center; justify-content: center; font-size: var(--up-font-size-lg); color: var(--up-white); flex-shrink: 0; }
+.up-modal-header-text { flex: 1; }
+.up-modal-header-text h3 { font-size: var(--up-font-size-lg); margin: 0; }
+.up-modal-subtitle { font-size: var(--up-font-size-xs); color: var(--up-text-muted); }
+.up-modal-close { color: var(--up-text-muted); }
+.up-modal-body { padding: var(--up-space-5); overflow-y: auto; flex: 1; }
+.up-modal-footer { display: flex; justify-content: space-between; align-items: center; gap: var(--up-space-2); padding: var(--up-space-4) var(--up-space-5); border-top: 1px solid var(--up-border-light); }
+.up-modal-footer-left { display: flex; gap: var(--up-space-2); }
+.up-modal-footer-right { display: flex; gap: var(--up-space-2); margin-left: auto; }
+
+/* S2: CONFIRM DIALOG */
+.up-confirm-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1100; display: flex; align-items: center; justify-content: center; }
+.up-confirm-dialog { background: var(--up-white); border-radius: var(--up-radius-lg); box-shadow: var(--up-shadow-xl); padding: var(--up-space-6); max-width: 400px; width: 90%; text-align: center; }
+.up-confirm-dialog h3 { margin-bottom: var(--up-space-3); font-size: var(--up-font-size-lg); }
+.up-confirm-dialog p { color: var(--up-text-secondary); font-size: var(--up-font-size-sm); margin: 0 0 var(--up-space-5); line-height: 1.5; }
+.up-confirm-actions { display: flex; gap: var(--up-space-2); justify-content: center; }
+.up-btn-danger-filled { background: var(--up-error); color: var(--up-white); border-color: var(--up-error); }
+.up-btn-danger-filled:hover { background: #c12a1f; border-color: #c12a1f; }
+
+/* S3: CONFIGURATION STEPS */
+.up-config-step { margin-bottom: var(--up-space-5); padding-bottom: var(--up-space-5); border-bottom: 1px solid var(--up-border-light); }
+.up-config-step:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+.up-config-step--locked { opacity: 0.35; pointer-events: none; }
+.up-step-header { display: flex; align-items: center; gap: var(--up-space-3); margin-bottom: var(--up-space-3); }
+.up-step-num { width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: var(--up-font-size-xs); font-weight: 700; background: var(--up-gray-100); color: var(--up-text-muted); flex-shrink: 0; }
+.up-step-num--active { background: var(--up-primary); color: var(--up-white); }
+.up-step-num--done { background: var(--up-success); color: var(--up-white); }
+.up-step-title { font-weight: 600; font-size: var(--up-font-size-base); }
+.up-step-badge { display: inline-flex; align-items: center; gap: 4px; font-size: var(--up-font-size-xs); font-weight: 600; padding: 2px 10px; border-radius: var(--up-radius-full); margin-left: auto; }
+.up-step-badge--success { background: var(--up-success-light); color: var(--up-success); }
+.up-step-lock { font-size: var(--up-font-size-xs); color: var(--up-text-muted); margin-left: auto; display: flex; align-items: center; gap: 4px; }
+.up-step-body { padding-left: 38px; }
+
+/* S4: KEY INPUT & VERIFICATION */
+.up-key-row { display: flex; gap: var(--up-space-3); align-items: center; }
+.up-key-input { flex: 1; font-family: var(--up-font-mono); font-size: var(--up-font-size-xs); letter-spacing: 0.02em; }
+.up-key-meta { margin-top: var(--up-space-2); font-size: var(--up-font-size-xs); color: var(--up-text-muted); display: flex; align-items: center; gap: 4px; }
+.up-alert { margin-top: var(--up-space-3); padding: var(--up-space-3) var(--up-space-4); border-radius: var(--up-radius-sm); font-size: var(--up-font-size-xs); display: flex; align-items: center; gap: var(--up-space-2); line-height: 1.4; }
+.up-alert--success { background: var(--up-success-light); color: var(--up-success); }
+.up-alert--error { background: var(--up-error-light); color: var(--up-error); }
+.up-alert--warning { background: var(--up-warning-light); color: var(--up-warning); }
+.up-alert--info { background: var(--up-info-light); color: var(--up-info); }
+
+/* Spinner */
+.up-spinner { width: 14px; height: 14px; border: 2px solid var(--up-gray-400); border-top-color: transparent; border-radius: 50%; display: inline-block; animation: up-spin 0.7s linear infinite; }
+@keyframes up-spin { to { transform: rotate(360deg); } }
+
+/* S5: MODEL SELECTION LIST (inside modal) */
+.up-modal-model-list { display: flex; flex-direction: column; gap: var(--up-space-2); }
+.up-mm-card { display: flex; align-items: center; gap: var(--up-space-3); padding: var(--up-space-3) var(--up-space-4); border: 1px solid var(--up-border-light); border-radius: var(--up-radius-sm); transition: all var(--up-transition-fast); background: var(--up-white); }
+.up-mm-card:hover { border-color: var(--up-border-dark); }
+.up-mm-card--on { border-color: var(--up-primary); background: var(--up-primary-subtle); }
+.up-toggle-wrap { display: inline-flex; align-items: center; cursor: pointer; flex-shrink: 0; }
+.up-toggle-wrap input[type="checkbox"] { display: none; }
+.up-mm-info { flex: 1; min-width: 0; }
+.up-mm-info strong { display: block; font-size: var(--up-font-size-sm); font-weight: 600; }
+.up-mm-info code { display: block; font-family: var(--up-font-mono); font-size: 10px; color: var(--up-text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.up-mm-star { flex-shrink: 0; }
+.up-refresh-btn { display: inline-flex; }
+
+/* S6: PARAMETER CONTROLS */
+.up-params-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: var(--up-space-4); }
+.up-param-group { display: flex; flex-direction: column; gap: var(--up-space-1); }
+.up-param-group label { font-size: var(--up-font-size-xs); font-weight: 600; color: var(--up-text-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+.up-slider-row { display: flex; align-items: center; gap: var(--up-space-2); }
+.up-range { flex: 1; height: 4px; -webkit-appearance: none; appearance: none; background: var(--up-gray-200); border-radius: 2px; outline: none; }
+.up-range::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%; background: var(--up-primary); cursor: pointer; border: 2px solid var(--up-white); box-shadow: var(--up-shadow-sm); }
+.up-range::-moz-range-thumb { width: 16px; height: 16px; border-radius: 50%; background: var(--up-primary); cursor: pointer; border: 2px solid var(--up-white); box-shadow: var(--up-shadow-sm); }
+.up-range:focus { outline: none; }
+.up-range:focus::-webkit-slider-thumb { box-shadow: var(--up-shadow-glow); }
+.up-param-val { font-size: var(--up-font-size-xs); font-family: var(--up-font-mono); color: var(--up-text-secondary); min-width: 36px; text-align: right; font-weight: 500; }
+.up-param-hint { font-size: 10px; color: var(--up-text-muted); margin-top: 2px; }
+
+/* S7: FORM LAYOUTS */
+.up-editor-form { display: flex; flex-direction: column; gap: var(--up-space-4); }
+.up-form-group { display: flex; flex-direction: column; gap: var(--up-space-1); }
+.up-form-group label { font-size: var(--up-font-size-xs); font-weight: 600; color: var(--up-text-secondary); }
+.up-form-row { display: flex; gap: var(--up-space-4); }
+.up-form-half { flex: 1; display: flex; flex-direction: column; gap: var(--up-space-1); }
+.up-form-half label { font-size: var(--up-font-size-xs); font-weight: 600; color: var(--up-text-secondary); }
+
+/* S8: TOGGLE SWITCH — small variant for modal */
+.up-toggle--sm { width: 26px; height: 14px; }
+.up-toggle--sm .up-toggle-knob { width: 10px; height: 10px; }
+.up-toggle--sm.up-toggle--on .up-toggle-knob { transform: translateX(12px); }
+
+/* S9: PROVIDER CONFIG CARD STATES */
+.up-prov-card--configuring { border-color: var(--up-primary); box-shadow: var(--up-shadow-glow); }
+.up-prov-card--error { border-color: var(--up-error); }
+
+/* S10: SUCCESS/ERROR BUTTON STATES */
+.up-btn-success { background: var(--up-success); color: var(--up-white); border-color: var(--up-success); }
+.up-btn-success:hover { background: #0b7a43; border-color: #0b7a43; }
+
+/* S11: RESPONSIVE */
+@media (max-width: 768px) {
+  .up-modal { width: 95%; }
+  .up-modal-header { padding: var(--up-space-3) var(--up-space-4); }
+  .up-modal-body { padding: var(--up-space-4); }
+  .up-modal-footer { padding: var(--up-space-3) var(--up-space-4); flex-wrap: wrap; }
+  .up-step-body { padding-left: var(--up-space-4); }
+  .up-params-grid { grid-template-columns: 1fr; }
+  .up-key-row { flex-direction: column; }
+  .up-key-input { width: 100%; }
+  .up-mm-card { flex-wrap: wrap; gap: var(--up-space-2); }
+  .up-mm-info { min-width: calc(100% - 100px); }
+}
+
+@media (max-width: 480px) {
+  .up-modal-lg { max-width: 100%; }
+  .up-modal { border-radius: var(--up-radius-md); }
+  .up-confirm-dialog { padding: var(--up-space-4); }
+  .up-modal-footer { flex-direction: column; gap: var(--up-space-2); }
+  .up-modal-footer-left, .up-modal-footer-right { width: 100%; }
+  .up-modal-footer-right { justify-content: flex-end; }
+}
+
+/* S12: ANIMATIONS */
+.up-mm-card { animation: up-cardFade 0.2s ease-out; }
+@keyframes up-cardFade { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
+.up-alert { animation: up-alertIn 0.3s ease-out; }
+@keyframes up-alertIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+
