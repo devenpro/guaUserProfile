@@ -1,0 +1,45 @@
+{
+  "name": "dashboard",
+  "type": "view",
+  "summary": "Renders the #dashboard hash route. Shows the active provider grid (one card per enabled provider with model count + key status) and the recent activity feed (collapsed to last 5 by default, expandable to last 50).",
+  "entry": "renderDashboard",
+  "source": "src/10-part1/up-part1.js:780",
+  "triggers": [
+    "navigate('dashboard')",
+    "hashchange to #dashboard",
+    "first load with no hash",
+    "first load with unrecognized hash"
+  ],
+  "reads": {
+    "state": [
+      "S.data.providers",
+      "S.activeProviders",
+      "S.data.activity",
+      "S.activityExpanded",
+      "S.exportableCount",
+      "S.verifiedCount",
+      "S.totalActiveModels",
+      "S.user"
+    ],
+    "dom": [],
+    "network": []
+  },
+  "writes": {
+    "state": [],
+    "dom": ["#upContent innerHTML"],
+    "network": []
+  },
+  "produces_html": true,
+  "failure_modes": [
+    {
+      "scenario": "S.data.providers undefined or malformed",
+      "handling": "renderCurrentView() error boundary catches the throw and replaces #upContent with .up-crash-card showing the stack trace"
+    },
+    {
+      "scenario": "Empty activity log",
+      "handling": "Activity panel renders an empty-state hint; not a crash"
+    }
+  ],
+  "tags": ["view", "dashboard", "activity", "stats", "provider-grid"],
+  "related": ["providers", "models"]
+}

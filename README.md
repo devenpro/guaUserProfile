@@ -19,9 +19,15 @@ dist/                 Build output. Committed so jsDelivr can serve it.
   up.js               Single concatenated JS bundle (loaded by Drupal)
   up.css              Single concatenated CSS bundle (loaded by Drupal)
 
+components/           AI-friendliness schemas. One .component.json per view,
+                      AI action, and data export. Drives docs/COMPONENT-INDEX.md.
+
 docs/                 Architecture, API reference, development guide, style reference
+  COMPONENT-INDEX.md  AUTO-GENERATED from components/. Do not edit by hand.
+
 scripts/
   build.mjs           Concatenates src/ → dist/
+  build-component-index.mjs   Walks components/ → docs/COMPONENT-INDEX.md
 ```
 
 ## Local development

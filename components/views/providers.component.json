@@ -1,0 +1,41 @@
+{
+  "name": "providers",
+  "type": "view",
+  "summary": "Renders the #providers hash route. Full provider list with a 5-filter toolbar (all / configured / unconfigured / major / infra), inline quick-test button per row, enable/disable toggle, and a Configure/Manage button that opens the Part-2A provider modal.",
+  "entry": "renderProviders",
+  "source": "src/10-part1/up-part1.js:878",
+  "triggers": [
+    "navigate('providers')",
+    "hashchange to #providers",
+    "Part-2A renderer override via window._upRenderers.providers (currently no override registered)"
+  ],
+  "reads": {
+    "state": [
+      "S.data.providers",
+      "S.providerFilter",
+      "S.providerMap",
+      "Constants.MODEL_CATALOG",
+      "S.exportableCount"
+    ],
+    "dom": [],
+    "network": []
+  },
+  "writes": {
+    "state": [],
+    "dom": ["#upContent innerHTML"],
+    "network": []
+  },
+  "produces_html": true,
+  "failure_modes": [
+    {
+      "scenario": "S.providerMap stale (buildMaps() not called after a mutation)",
+      "handling": "Some cards render with wrong counts but page is functional; renderCurrentView() error boundary catches harder failures"
+    },
+    {
+      "scenario": "Custom provider missing test_endpoint",
+      "handling": "Quick-test button is disabled in the row, with an info toast on click"
+    }
+  ],
+  "tags": ["view", "providers", "filter-toolbar", "quick-test", "enable-toggle"],
+  "related": ["dashboard", "models", "key-verify"]
+}
