@@ -33,6 +33,10 @@ scripts/
 ## Local development
 
 ```powershell
+# One-time after cloning — install the pre-commit hook (rebuilds dist/
+# and parse-checks the bundle before each commit).
+bash scripts/install-hooks.sh
+
 # Edit any file under src/, then rebuild:
 node scripts/build.mjs
 
@@ -41,6 +45,8 @@ npm run build
 ```
 
 The build is a simple alphabetical-walk concatenation — no bundler, no plugins, no transforms. File ordering is controlled by numeric prefixes on folder and file names. To reorder, rename.
+
+Sample `field_json_data` / `field_llm_config` blobs live under [`docs/samples/`](docs/samples/) — useful when seeding a fresh Drupal node or when documenting the producer/consumer contract for sibling apps.
 
 > **Note on `npm`**: Windows PowerShell may block `npm.ps1` with "running scripts is disabled". Two fixes:
 > - Run `npm.cmd run build` (forces the .cmd shim, bypassing .ps1)
@@ -124,3 +130,7 @@ This means individual source files are **not** standalone-valid JS (they have un
 | Field 2 | `field_llm_config` (Textarea, plain text) — clean LLM export |
 
 See [`docs/PROJECT.md`](docs/PROJECT.md) for the full setup, [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the init chain and state model, and [`docs/DEVELOPMENT-GUIDE.md`](docs/DEVELOPMENT-GUIDE.md) for the mandatory 7-step save flow.
+
+## License
+
+[MIT](LICENSE).

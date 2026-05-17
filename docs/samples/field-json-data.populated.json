@@ -1,0 +1,119 @@
+{
+  "providers": [
+    {
+      "id": "gemini",
+      "label": "Gemini",
+      "active": true,
+      "enabled": true,
+      "api_key": "gemini-mock-key-PLACEHOLDER",
+      "key_verified": true,
+      "key_verified_at": "2026-05-10T14:22:08.000Z",
+      "category": "major",
+      "last_live_refresh": "2026-05-12T09:03:41.000Z",
+      "models": [
+        {
+          "id": "gemini-2.5-flash",
+          "label": "Gemini 2.5 Flash",
+          "active": true,
+          "is_default": true,
+          "temperature": 0.7,
+          "max_tokens": 8192,
+          "top_p": 0.95,
+          "category": "fast",
+          "source": "catalog"
+        },
+        {
+          "id": "gemini-2.5-pro",
+          "label": "Gemini 2.5 Pro",
+          "active": true,
+          "is_default": false,
+          "temperature": 0.5,
+          "max_tokens": 32768,
+          "top_p": 0.95,
+          "category": "frontier",
+          "source": "catalog"
+        }
+      ]
+    },
+    {
+      "id": "groq",
+      "label": "Groq",
+      "active": true,
+      "enabled": true,
+      "api_key": "gsk_mock_PLACEHOLDER_DO_NOT_USE",
+      "key_verified": true,
+      "key_verified_at": "2026-05-10T14:25:11.000Z",
+      "category": "infra",
+      "last_live_refresh": null,
+      "models": [
+        {
+          "id": "llama-3.3-70b-versatile",
+          "label": "Llama 3.3 70B Versatile",
+          "active": true,
+          "is_default": true,
+          "temperature": 0.7,
+          "max_tokens": 8192,
+          "top_p": 0.95,
+          "category": "balanced",
+          "source": "catalog"
+        }
+      ]
+    },
+    {
+      "id": "openrouter",
+      "label": "OpenRouter",
+      "active": true,
+      "enabled": true,
+      "api_key": "sk-or-v1-mockPLACEHOLDER",
+      "key_verified": true,
+      "key_verified_at": "2026-05-11T08:12:00.000Z",
+      "category": "infra",
+      "last_live_refresh": "2026-05-12T09:04:17.000Z",
+      "models": [
+        {
+          "id": "anthropic/claude-sonnet-4",
+          "label": "Claude Sonnet 4 (via OpenRouter)",
+          "active": true,
+          "is_default": true,
+          "temperature": 0.7,
+          "max_tokens": 8192,
+          "top_p": 0.95,
+          "category": "frontier",
+          "source": "catalog"
+        }
+      ]
+    }
+  ],
+  "default_provider": "gemini",
+  "default_model": "gemini-2.5-flash",
+  "preferences": {
+    "auto_sync_llm_config": true,
+    "timezone": "America/Los_Angeles"
+  },
+  "activity": [
+    {
+      "id": "act_seed_1",
+      "type": "provider-verified",
+      "description": "Verified Gemini API key",
+      "timestamp": "2026-05-10T14:22:08.000Z",
+      "user_id": "42",
+      "user_name": "Sample User"
+    },
+    {
+      "id": "act_seed_2",
+      "type": "provider-verified",
+      "description": "Verified Groq API key",
+      "timestamp": "2026-05-10T14:25:11.000Z",
+      "user_id": "42",
+      "user_name": "Sample User"
+    },
+    {
+      "id": "act_seed_3",
+      "type": "default-changed",
+      "description": "Default model set to Gemini 2.5 Flash",
+      "timestamp": "2026-05-10T14:26:00.000Z",
+      "user_id": "42",
+      "user_name": "Sample User"
+    }
+  ]
+}
