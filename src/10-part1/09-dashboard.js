@@ -52,15 +52,19 @@
         html += '</div>';
       }
       html += '</div>';
-    } else {
-      // Empty state
-      html += '<div class="up-empty-state">';
-      html += '<div class="up-empty-state-icon">' + icon('bolt') + '</div>';
-      html += '<div class="up-empty-state-title">No active providers</div>';
-      html += '<div class="up-empty-state-text">Configure and enable a provider to get started.</div>';
-      html += '<button class="up-btn up-btn-primary" data-action="navigate" data-view="providers" style="margin-top:var(--up-space-4)">' + icon('plus') + ' Configure Provider</button>';
-      html += '</div>';
+    } else if (S.configuredCount === 0) {
+      // First-time empty state — show a welcome card walking the user
+      // through the 4-step "configure your first provider" flow. The
+      // Recommended Providers rail directly below this card gives them
+      // one-click access to the top free-tier providers.
+      html += renderWelcomeGuide();
     }
+
+    // Recommended free providers rail — listed regardless of whether
+    // the user already has some configured, as long as ≥1 of the
+    // recommended set is still unconfigured. Gives a permanent surface
+    // to add Gemini/Groq/HF/OpenRouter etc. without leaving the dash.
+    html += renderRecommendedProviders();
 
     // Activity feed
     html += '<div class="up-section">';
@@ -92,6 +96,99 @@
     html += '</div>';
 
     html += '</div>'; // view
+    return html;
+  }
+
+  // First-time welcome guide. Shown only when S.configuredCount === 0.
+  // The "Start with Gemini" CTA navigates straight to the full-page
+  // editor for Gemini (the top-recommended provider). If Gemini is
+  // missing for some reason (e.g., catalog edit), falls back to the
+  // first available recommended provider, then to the providers view.
+  function renderWelcomeGuide() {
+    var firstRec = null;
+    for (var i = 0; i < RECOMMENDED_ORDER.length; i++) {
+      if (S.providerMap[RECOMMENDED_ORDER[i]]) { firstRec = RECOMMENDED_ORDER[i]; break; }
+    }
+    var ctaLabel = firstRec
+      ? 'Start with ' + (MODEL_CATALOG[firstRec] ? MODEL_CATALOG[firstRec].label : firstRec)
+      : 'Open Providers';
+
+    var html = '<div class="up-welcome-card">';
+    html += '<div class="up-welcome-card-icon">' + icon('sparkles') + '</div>';
+    html += '<div class="up-welcome-card-body">';
+    html += '<h3>Welcome — get started in 60 seconds</h3>';
+    html += '<p>Configure your first AI provider to unlock model selection and start using the platform. We\'ve picked the easiest free providers for you below.</p>';
+    html += '<ol class="up-welcome-steps">';
+    html += '<li><strong>Pick a provider.</strong> Gemini and Groq give you free keys without a credit card.</li>';
+    html += '<li><strong>Paste your API key.</strong> Each provider\'s editor links to its key page and explains where to find it.</li>';
+    html += '<li><strong>Verify the key.</strong> We make a 1-token test request to confirm it works.</li>';
+    html += '<li><strong>Pick your models.</strong> Toggle the models you want to expose to every app on the platform.</li>';
+    html += '</ol>';
+    if (firstRec) {
+      html += '<button class="up-btn up-btn-primary" data-action="open-provider" data-provider="' + esc(firstRec) + '">' + icon('arrow-right') + ' ' + esc(ctaLabel) + '</button>';
+    } else {
+      html += '<button class="up-btn up-btn-primary" data-action="navigate" data-view="providers">' + icon('arrow-right') + ' ' + esc(ctaLabel) + '</button>';
+    }
+    html += '</div>';
+    html += '</div>';
+    return html;
+  }
+
+  // Recommended Providers rail. Renders a horizontal card grid of any
+  // RECOMMENDED_ORDER provider the user has not yet configured (no key
+  // entered yet — we keep them visible until the user has actually put
+  // a key in, even if not verified). Stays visible after some providers
+  // are configured, as long as ≥1 recommended provider remains untouched.
+  function renderRecommendedProviders() {
+    var unconfigured = [];
+    for (var i = 0; i < RECOMMENDED_ORDER.length; i++) {
+      var pid = RECOMMENDED_ORDER[i];
+      var prov = S.providerMap[pid];
+      if (!prov) continue;
+      // "Unconfigured" = no API key entered yet. Once they paste a key
+      // (verified or not) the rail card disappears — they can finish in
+      // the editor or via the Providers view.
+      if (prov.api_key && prov.api_key.length > 0) continue;
+      var cat = MODEL_CATALOG[pid];
+      if (!cat) continue;
+      unconfigured.push({ id: pid, prov: prov, cat: cat });
+    }
+    if (unconfigured.length === 0) return '';
+
+    var isFirstTime = S.configuredCount === 0;
+    var titleLabel = isFirstTime ? 'Recommended free providers' : 'Add another provider';
+    var subtitle = isFirstTime
+      ? 'Free API keys — no credit card required. Pick one to get started.'
+      : 'Free providers you haven\'t configured yet. One-click setup with built-in guidance.';
+
+    var html = '<div class="up-section up-recommended">';
+    html += '<div class="up-section-header">';
+    html += '<h3>' + icon('sparkles') + ' ' + esc(titleLabel) + '</h3>';
+    html += '<span class="up-section-subtitle">' + esc(subtitle) + '</span>';
+    html += '</div>';
+
+    html += '<div class="up-rec-grid">';
+    for (var j = 0; j < unconfigured.length; j++) {
+      var u = unconfigured[j];
+      var freeNote = (u.cat.guide && u.cat.guide.free_tier) ? u.cat.guide.free_tier : '';
+
+      html += '<div class="up-rec-card" data-action="open-provider" data-provider="' + esc(u.id) + '">';
+      html += '<div class="up-rec-card-top">';
+      html += '<span class="up-rec-card-icon" style="background:' + u.cat.color + '">' + icon(u.cat.icon) + '</span>';
+      if (u.cat.free_tier) {
+        html += '<span class="up-rec-free-pill">' + icon('check') + ' Free tier</span>';
+      }
+      html += '</div>';
+      html += '<div class="up-rec-card-name">' + esc(u.cat.label) + '</div>';
+      html += '<div class="up-rec-card-desc">' + esc(u.cat.desc) + '</div>';
+      if (freeNote) {
+        html += '<div class="up-rec-card-note">' + esc(truncate(freeNote, 110)) + '</div>';
+      }
+      html += '<div class="up-rec-card-cta">' + icon('arrow-right') + ' Configure now</div>';
+      html += '</div>';
+    }
+    html += '</div>';
+    html += '</div>';
     return html;
   }
 

@@ -10,7 +10,7 @@ Total components: 6.
 
 | Component | Summary | Entry | Source |
 |---|---|---|---|
-| **dashboard** | Renders the #dashboard hash route. Shows the active provider grid (one card per enabled provider with model count + key status) and the recent activity feed (collapsed to last 5 by default, expandable to last 50). | `renderDashboard` | [src/10-part1/up-part1.js:780](src/10-part1/up-part1.js) |
+| **dashboard** | Renders the #dashboard hash route. Shows the active provider grid (one card per enabled provider with model count + key status), the welcome guide (only when zero providers configured), the Recommended Providers rail (lists unconfigured RECOMMENDED_ORDER providers — Gemini, Groq, Hugging Face, OpenRouter, Mistral, DeepSeek, Together — visible as long as ≥1 is still unconfigured), and the recent activity feed (collapsed to last 5 by default, expandable to last 50). | `renderDashboard` | [src/10-part1/09-dashboard.js:4](src/10-part1/09-dashboard.js) |
 | **models** | Renders the #models hash route. Per-provider model tables with active toggle, default-star, category pill (fast/balanced/powerful), temperature & token display, fuzzy search across all models, bulk enable/disable per provider, and a live-refresh button for providers that expose /v1/models. Profile-level default-provider selector at the bottom. | `renderModels` | [src/10-part1/up-part1.js:1005](src/10-part1/up-part1.js) |
 | **providers** | Renders the #providers hash route. Full provider list with a 5-filter toolbar (all / configured / unconfigured / major / infra), inline quick-test button per row, enable/disable toggle, and a Configure/Manage button that opens the Part-2A provider modal. | `renderProviders` | [src/10-part1/up-part1.js:878](src/10-part1/up-part1.js) |
 
@@ -33,9 +33,9 @@ Total components: 6.
 
 ### dashboard  `view`
 
-Renders the #dashboard hash route. Shows the active provider grid (one card per enabled provider with model count + key status) and the recent activity feed (collapsed to last 5 by default, expandable to last 50).
+Renders the #dashboard hash route. Shows the active provider grid (one card per enabled provider with model count + key status), the welcome guide (only when zero providers configured), the Recommended Providers rail (lists unconfigured RECOMMENDED_ORDER providers — Gemini, Groq, Hugging Face, OpenRouter, Mistral, DeepSeek, Together — visible as long as ≥1 is still unconfigured), and the recent activity feed (collapsed to last 5 by default, expandable to last 50).
 
-**Entry:** `renderDashboard` at `src/10-part1/up-part1.js:780`
+**Entry:** `renderDashboard` at `src/10-part1/09-dashboard.js:4`
 
 **Schema source:** `components/views/dashboard.component.json`
 
@@ -48,7 +48,7 @@ Renders the #dashboard hash route. Shows the active provider grid (one card per 
 
 **Reads:**
 
-- State: `S.data.providers`, `S.activeProviders`, `S.data.activity`, `S.activityExpanded`, `S.exportableCount`, `S.verifiedCount`, `S.totalActiveModels`, `S.user`
+- State: `S.data.providers`, `S.providerMap`, `S.activeProviders`, `S.data.activity`, `S.activityExpanded`, `S.exportableCount`, `S.verifiedCount`, `S.configuredCount`, `S.totalActiveModels`, `S.user`
 
 **Writes:**
 
@@ -58,10 +58,12 @@ Renders the #dashboard hash route. Shows the active provider grid (one card per 
 
 - **S.data.providers undefined or malformed** — renderCurrentView() error boundary catches the throw and replaces #upContent with .up-crash-card showing the stack trace
 - **Empty activity log** — Activity panel renders an empty-state hint; not a crash
+- **Zero providers configured** — Welcome guide card renders at top with a 'Start with <top-recommended>' CTA; Recommended rail below offers one-click setup for Gemini/Groq/Hugging Face/OpenRouter/Mistral/DeepSeek/Together
+- **All RECOMMENDED_ORDER providers already have keys** — Recommended rail returns empty string and is omitted from the rendered output
 
-**Tags:** `view` · `dashboard` · `activity` · `stats` · `provider-grid`
+**Tags:** `view` · `dashboard` · `activity` · `stats` · `provider-grid` · `recommended` · `welcome` · `onboarding`
 
-**Related:** `providers`, `models`
+**Related:** `providers`, `models`, `provider-editor`
 
 ---
 

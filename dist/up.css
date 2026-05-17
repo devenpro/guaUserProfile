@@ -1,4 +1,4 @@
-/* User Profile v0.1.4 · built 2026-05-17T05:33:56.740Z · 2 source files (see src/) */
+/* User Profile v0.1.4 · built 2026-05-17T05:36:35.263Z · 2 source files (see src/) */
 
 /* ===== src/styles/10-part1/up-part1.css ===== */
 /**
@@ -173,11 +173,35 @@ body.up-active .block-page-title-block { display: none !important; }
 
 /* S11B: SECTIONS & FORM HINTS */
 .up-section { background: var(--up-white); border: 1px solid var(--up-border-light); border-radius: var(--up-radius-md); padding: var(--up-space-5); }
-.up-section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--up-space-4); }
+.up-section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--up-space-4); flex-wrap: wrap; gap: var(--up-space-2); }
 .up-section-header h3 { display: flex; align-items: center; gap: var(--up-space-2); margin: 0; }
+.up-section-subtitle { font-size: var(--up-font-size-xs); color: var(--up-text-muted); font-weight: 500; }
 .up-form-hint { display: block; font-size: var(--up-font-size-xs); color: var(--up-text-muted); margin-top: 4px; }
 .up-form-hint code { font-family: var(--up-font-mono); font-size: 10px; background: var(--up-gray-100); padding: 1px 4px; border-radius: 3px; }
 .up-required { color: var(--up-error); }
+
+/* S11C: WELCOME CARD (first-time setup guide) */
+.up-welcome-card { display: flex; align-items: flex-start; gap: var(--up-space-5); padding: var(--up-space-6); margin-bottom: var(--up-space-6); border-radius: var(--up-radius-lg); background: linear-gradient(135deg, var(--up-primary-subtle) 0%, var(--up-primary-light) 100%); border: 1px solid var(--up-primary-light); }
+.up-welcome-card-icon { width: 56px; height: 56px; border-radius: var(--up-radius-md); background: var(--up-primary); color: var(--up-white); display: flex; align-items: center; justify-content: center; font-size: var(--up-font-size-2xl); flex-shrink: 0; box-shadow: var(--up-shadow-md); }
+.up-welcome-card-body { flex: 1; min-width: 0; }
+.up-welcome-card-body h3 { font-size: var(--up-font-size-xl); margin: 0 0 var(--up-space-2); color: var(--up-primary-dark); }
+.up-welcome-card-body p { font-size: var(--up-font-size-sm); color: var(--up-text-secondary); margin: 0 0 var(--up-space-3); }
+.up-welcome-steps { font-size: var(--up-font-size-sm); color: var(--up-text-secondary); padding-left: var(--up-space-5); margin: 0 0 var(--up-space-4); display: flex; flex-direction: column; gap: 4px; }
+.up-welcome-steps li strong { color: var(--up-text-primary); }
+
+/* S11D: RECOMMENDED PROVIDERS RAIL */
+.up-recommended { margin-bottom: var(--up-space-6); }
+.up-rec-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: var(--up-space-4); }
+.up-rec-card { background: var(--up-white); border: 1px solid var(--up-border-light); border-radius: var(--up-radius-md); padding: var(--up-space-4); cursor: pointer; transition: all var(--up-transition-fast); display: flex; flex-direction: column; gap: var(--up-space-2); position: relative; }
+.up-rec-card:hover { border-color: var(--up-primary); box-shadow: var(--up-shadow-md); transform: translateY(-2px); }
+.up-rec-card-top { display: flex; align-items: center; justify-content: space-between; gap: var(--up-space-2); }
+.up-rec-card-icon { width: 36px; height: 36px; border-radius: var(--up-radius-md); display: flex; align-items: center; justify-content: center; font-size: var(--up-font-size-lg); color: var(--up-white); flex-shrink: 0; }
+.up-rec-free-pill { display: inline-flex; align-items: center; gap: 4px; font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: var(--up-radius-full); background: var(--up-success-light); color: var(--up-success); }
+.up-rec-card-name { font-weight: 600; font-size: var(--up-font-size-md); color: var(--up-text-primary); }
+.up-rec-card-desc { font-size: var(--up-font-size-xs); color: var(--up-text-secondary); line-height: 1.4; }
+.up-rec-card-note { font-size: var(--up-font-size-xs); color: var(--up-text-muted); line-height: 1.4; padding-top: var(--up-space-2); border-top: 1px dashed var(--up-border-light); }
+.up-rec-card-cta { margin-top: auto; display: flex; align-items: center; gap: 4px; font-size: var(--up-font-size-xs); font-weight: 600; color: var(--up-primary); padding-top: var(--up-space-2); }
+.up-rec-card:hover .up-rec-card-cta { color: var(--up-primary-dark); }
 
 /* S12: PROVIDERS VIEW */
 .up-providers-list { display: flex; flex-direction: column; gap: var(--up-space-3); }
@@ -324,6 +348,9 @@ body.up-active .block-page-title-block { display: none !important; }
   .up-mc-cat { order: 3; }
   .up-mc-def { order: 4; }
   .up-mc-temp, .up-mc-tok { order: 5; }
+  .up-welcome-card { flex-direction: column; padding: var(--up-space-4); gap: var(--up-space-3); }
+  .up-welcome-card-icon { width: 44px; height: 44px; font-size: var(--up-font-size-xl); }
+  .up-rec-grid { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 480px) {
