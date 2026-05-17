@@ -1,6 +1,6 @@
-/* User Profile v0.1.4 · built 2026-05-17T05:45:20.518Z · 35 source files (see src/) */
+/* User Profile v0.1.4 · built 2026-05-17T05:46:42.797Z · 35 source files (see src/) */
 window.UP_VERSION = "0.1.4";
-window.UP_BUILD_TIME = "2026-05-17T05:45:20.518Z";
+window.UP_BUILD_TIME = "2026-05-17T05:46:42.797Z";
 
 /* ===== src/10-part1/00-header.js ===== */
 /**
@@ -1430,6 +1430,11 @@ window.UP_BUILD_TIME = "2026-05-17T05:45:20.518Z";
       html += '<div class="up-prov-name-row">';
       html += '<span class="up-prov-name">' + esc(p.label) + '</span>';
       html += '<span class="up-prov-cat up-prov-cat--' + esc(pCategory) + '">' + (pCategory === 'major' ? 'Model Provider' : 'Infrastructure') + '</span>';
+      // Surface free-tier status so users browsing the list can spot
+      // no-credit-card-required providers without opening each editor.
+      if (catInfo && catInfo.free_tier) {
+        html += '<span class="up-rec-free-pill" title="Free API key available without a credit card">' + icon('check') + ' Free tier</span>';
+      }
       html += '</div>';
       html += '<div class="up-prov-desc">' + esc(pDesc) + '</div>';
 

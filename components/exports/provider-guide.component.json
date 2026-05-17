@@ -1,0 +1,60 @@
+{
+  "name": "provider-guide",
+  "type": "data-export",
+  "summary": "Per-provider configuration guide block — a static dataset embedded inside MODEL_CATALOG[*].guide. NOT exported via field_llm_config (this is internal app data for the editor view). Read by renderProviderGuide() in the full-page provider editor to render the right-column guide panel (signup link, key URL, free-tier note, ordered setup steps, troubleshooting list). Also surfaced in shorter form by renderRecommendedProviders() on the dashboard rail (free_tier note only, truncated to 110 chars).",
+  "entry": "MODEL_CATALOG[id].guide",
+  "source": "src/10-part1/01-constants.js:25",
+  "triggers": [
+    "renderProviderEditor() reads MODEL_CATALOG[id].guide to populate the right-column guide panel",
+    "renderRecommendedProviders() reads MODEL_CATALOG[id].guide.free_tier for the dashboard rail's truncated note",
+    "renderWelcomeGuide() uses MODEL_CATALOG[firstRec] for the 'Start with <provider>' CTA label"
+  ],
+  "reads": {
+    "state": [],
+    "dom": [],
+    "network": []
+  },
+  "writes": {
+    "state": [],
+    "dom": [],
+    "network": []
+  },
+  "produces_html": false,
+  "output_contract": {
+    "description": "Each MODEL_CATALOG entry MAY include a `guide` block matching this shape. When `guide` is null/missing (e.g., custom user-added providers), renderProviderGuide falls back to a minimal 'Custom provider' info card.",
+    "schema": {
+      "signup_url": "string — public URL where the user creates an account with the provider",
+      "key_url": "string — deep link to the provider's API-key management page",
+      "key_format": "string — human-readable description of the key's prefix or shape (e.g., 'Starts with \"sk-\" — about 50+ characters')",
+      "free_tier": "string — short description of the provider's free-tier policy; empty string for paid-only providers",
+      "steps": "array of { title: string, body: string } — ordered setup walkthrough",
+      "troubleshooting": "array of { issue: string, fix: string } — common verify-failure scenarios with remediation"
+    },
+    "example": {
+      "signup_url": "https://aistudio.google.com/",
+      "key_url": "https://aistudio.google.com/app/apikey",
+      "key_format": "Starts with \"AIza\" — about 39 characters.",
+      "free_tier": "Free tier with generous daily quota for Gemini 2.5 Flash and Flash Lite. No credit card required to start.",
+      "steps": [
+        { "title": "Sign in with Google", "body": "Open Google AI Studio and sign in with any Google account." },
+        { "title": "Create an API key", "body": "In AI Studio, click 'Get API key' and then 'Create API key'." }
+      ],
+      "troubleshooting": [
+        { "issue": "API_KEY_INVALID", "fix": "You may have pasted the key with whitespace. Re-copy from AI Studio." }
+      ]
+    }
+  },
+  "failure_modes": [
+    {
+      "scenario": "MODEL_CATALOG[id].guide missing (custom provider)",
+      "handling": "renderProviderGuide returns a minimal 'Custom provider' info card with the test_endpoint instead. Editor still functions; only the guide panel is degraded."
+    },
+    {
+      "scenario": "guide.steps or guide.troubleshooting empty/missing",
+      "handling": "Corresponding section is omitted from the rendered guide panel — no crash."
+    }
+  ],
+  "tags": ["data-export", "guide", "provider-onboarding", "static-catalog"],
+  "related": ["provider-editor", "dashboard"],
+  "breaking_change_warning": "This block is internal app data. It is NOT serialised to field_llm_config and NOT consumed by other apps on the platform. Adding/removing fields here only affects the editor's right-column rendering."
+}
