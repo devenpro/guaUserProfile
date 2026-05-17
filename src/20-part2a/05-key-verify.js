@@ -28,11 +28,6 @@
         });
         break;
 
-      case 'claude':
-        headers = { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' };
-        body = JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 10, messages: [{ role: 'user', content: 'Hello' }] });
-        break;
-
       case 'cohere':
         headers = { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey };
         body = JSON.stringify({ model: 'command-r', message: 'Hello', max_tokens: 10 });
@@ -220,54 +215,13 @@
     buildMaps();
     syncToTextarea();
 
-    // Update modal UI — unlock steps 2 & 3
-    var $btn = $('#upVerifyBtn');
-    $btn.removeClass('up-btn-loading').addClass('up-btn-success').prop('disabled', false)
-      .html(icon('check') + ' Verified');
-    $('#upVerifyStatus').html(
-      '<div class="up-alert up-alert--success">' + icon('check-circle') + ' API key is valid. ' + (prov.models || []).length + ' models available in catalog.</div>'
-    );
-
-    // Unlock model step and param step
-    var $modelStep = $('#upModelStep');
-    $modelStep.removeClass('up-config-step--locked');
-    $modelStep.find('.up-step-num').addClass('up-step-num--active');
-    $modelStep.find('.up-step-lock').remove();
-    // Render model list into step body
-    var catRef = Constants.MODEL_CATALOG[providerId];
-    // For custom providers, build a synthetic catRef
-    if (!catRef && prov.custom) {
-      catRef = { label: prov.label, icon: 'sparkles', color: prov.color || '#6b7280', models: (prov.models || []).map(function(m) { return { id: m.id, label: m.label, category: m.category || 'balanced', default_temp: m.temperature || 0.7, max_tokens: m.max_tokens || 8192 }; }) };
-    }
-    if (catRef) {
-      var stepBody = '<div class="up-step-body">' + renderModelSelectionList(prov, catRef);
-      if (prov.custom) {
-        stepBody += '<div class="up-custom-model-add" style="margin-top:var(--up-space-3)">';
-        stepBody += '<span class="up-form-hint">' + icon('info') + ' Custom providers: use Live Refresh to discover models, or add them manually via the Models view after saving.</span>';
-        stepBody += '</div>';
-      }
-      stepBody += '<button class="up-btn up-btn-xs up-btn-outline up-refresh-btn" data-action="live-refresh-modal" data-provider="' + esc(prov.id) + '" style="margin-top:var(--up-space-3)">' + icon('refresh') + ' Refresh from API</button>';
-      stepBody += '</div>';
-      $modelStep.find('.up-step-body').remove();
-      $modelStep.append(stepBody);
-    }
-
-    var $paramStep = $('#upParamStep');
-    $paramStep.removeClass('up-config-step--locked');
-    $paramStep.find('.up-step-num').addClass('up-step-num--active');
-    $paramStep.find('.up-step-lock').remove();
-    if (!$paramStep.find('.up-step-body').length) {
-      $paramStep.append('<div class="up-step-body">' + renderParameterControls(prov) + '</div>');
-    }
-
-    // Show save button in footer
-    $('.up-modal-footer-right').find('[data-action="modal-save"]').remove();
-    $('.up-modal-footer-right').append('<button class="up-btn up-btn-primary" data-action="modal-save">' + icon('check') + ' Save Provider</button>');
-
-    // Show remove button
-    if (!$('.up-modal-footer-left').length) {
-      $('.up-modal-footer').prepend('<div class="up-modal-footer-left"><button class="up-btn up-btn-danger up-btn-sm" data-action="remove-provider" data-provider="' + esc(providerId) + '">' + icon('trash') + ' Remove Provider</button></div>');
-    }
+    // Re-render the current view. The full-page editor (provider-editor)
+    // will redraw with the model selection + parameter controls now
+    // unlocked. The dashboard / providers list will redraw with the
+    // newly verified provider flipped into the verified state. The toast
+    // gives the user immediate feedback; the redraw follows.
+    toast(prov.label + ' verified — pick the models you want to expose.', 'success');
+    render();
   }
 
   function onVerifyFailure(providerId, errorMsg) {

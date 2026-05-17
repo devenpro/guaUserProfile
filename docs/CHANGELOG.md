@@ -3,6 +3,87 @@
 All notable changes to this app. Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 Versioning is independent per app.
 
+## [0.2.0] — Provider editor + onboarding guides
+
+### ⚠ BREAKING
+
+- **Claude removed as a direct provider.** Anthropic's HTTP API requires the
+  `anthropic-dangerous-direct-browser-access` header and is unreliable from
+  browsers (CORS preflight failures, region blocks, header rejection in
+  some browser versions). `claude` is dropped from `MODEL_CATALOG` and
+  `PROVIDER_ORDER`, and the matching `case 'claude':` is removed from
+  `buildTestRequest` in `05-key-verify.js`. `migrateData()` actively strips
+  any existing `claude` entry from `S.data.providers` on next load and
+  logs the removal to the activity feed. **Consumer apps that read
+  `field_llm_config` and were depending on `provider.id === 'claude'`
+  will see that provider disappear from existing users' configs after
+  their next save.** Migrate consumers to OpenRouter's
+  `anthropic/claude-sonnet-4` (already in the OpenRouter catalog) or
+  another provider before any users save.
+
+### Added
+
+- **Full-page provider editor view** at `#provider/<id>` replaces the
+  3-step modal. Two-column layout: form on the left (key + verify →
+  models → params with sticky save bar), guide panel on the right
+  (signup link, key URL, key-format hint, free-tier note, ordered setup
+  steps, troubleshooting list).
+- **Per-provider guides.** Each `MODEL_CATALOG` entry gains a `guide`
+  block populated for all 13 remaining providers. Renderable separately
+  via `renderProviderGuide()` (Part 2A).
+- **Recommended Providers rail on the dashboard.** Always shows
+  unconfigured `RECOMMENDED_ORDER` providers (Gemini → Groq →
+  Hugging Face → OpenRouter → Mistral → DeepSeek → Together) as
+  clickable cards, with free-tier badges and a one-line note from each
+  provider's guide.
+- **Welcome guide card** on the dashboard when zero providers are
+  configured. 4-step onboarding with a "Start with <top-recommended>"
+  CTA pointing at the first available recommended provider.
+- **"Free tier" pill** on Providers list cards for catalog providers
+  marked `free_tier: true`.
+- New constants: `PROVIDER_EDITOR_HASH_PREFIX`, `RECOMMENDED_ORDER`,
+  `REMOVED_PROVIDERS`. New state field `S.editingProviderId`.
+- New renderer registry entries: `R.providerEditor`,
+  `R.setupProviderEditorEvents`.
+- New `_upPart2A` exports: `renderProviderEditor`, `saveProviderFromEditor`.
+- New component schemas: `provider-editor` (view), `provider-guide`
+  (data-export — describes the guide-block contract).
+
+### Changed
+
+- `readHash` / `navigate` (`06-navigation.js`) now recognise the
+  `provider/<id>` parameterised route and resolve it to
+  `{currentView: 'provider-editor', editingProviderId: <id>}`.
+- `renderCurrentView` dispatches to `R.providerEditor` when the
+  resolved view is `provider-editor`; falls back to a "Loading editor…"
+  empty state if Part 2A hasn't loaded yet.
+- `migrateData` resolves an initial `#provider/<id>` URL on first
+  paint so deep links and bookmarks work without an extra navigation.
+- Nav active state highlights "Providers" while in the editor
+  sub-route.
+- `[data-action="open-provider"]` (used by dashboard active cards,
+  Recommended rail, Providers list, welcome card) now navigates to the
+  editor instead of opening the deprecated modal.
+- `onVerifySuccess` no longer DOM-patches the modal; it calls
+  `render()` so the editor view redraws naturally with verified state.
+
+### Removed
+
+- `claude` provider entry from `MODEL_CATALOG` and `PROVIDER_ORDER`.
+- `'claude'` branch from `buildTestRequest` (`05-key-verify.js`).
+- `openProviderModal` and `renderProviderModalContent` functions
+  (`04-provider-modal.js` gutted to shared form helpers only).
+- `_verifyingProvider` variable and the modal-save fallback that used it.
+- `data-action="live-refresh-modal"` handler (deprecated alongside the
+  modal). The editor uses `data-action="live-refresh"`.
+- `R.openProviderModal` registration and `openProviderModal` export
+  from `_upPart2A`.
+
+### Provider count
+
+- v0.1.x: 14 catalog providers
+- v0.2.0: **13** (Claude dropped)
+
 ## [1.0.0] — Baseline snapshot
 
 This is the production-ready baseline that every subsequent change is measured against. Recorded from the v1.0.0 source files (`up-part1.js`, `up-part2a.js`, `up-part2b.js`, `up-part1.css`, `up-part2.css`).

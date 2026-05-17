@@ -136,6 +136,39 @@
     d.activity = d.activity || [];
     if (!Array.isArray(d.activity)) d.activity = [];
 
+    // Strip providers that have been retired from the catalog (v0.2.0:
+    // claude — direct Anthropic API is browser-hostile). This IS a
+    // platform-wide breaking change: any consumer app reading
+    // field_llm_config for the stripped provider id will see it
+    // disappear on next save. The user explicitly opted in to this when
+    // adding provider-guide support.
+    var keptProviders = [];
+    for (var rmi = 0; rmi < d.providers.length; rmi++) {
+      var rp = d.providers[rmi];
+      if (REMOVED_PROVIDERS && REMOVED_PROVIDERS[rp.id]) {
+        // Log the removal so the activity feed shows it; the user (and
+        // any auditor) can trace exactly when the entry vanished.
+        d.activity.push({
+          id: 'act_migrate_' + rp.id + '_' + Date.now().toString(36),
+          type: 'provider-removed',
+          description: rp.label + ' provider retired from catalog: ' + REMOVED_PROVIDERS[rp.id],
+          timestamp: new Date().toISOString(),
+          user_id: S.user.id || '',
+          user_name: S.user.fullName || S.user.name || ''
+        });
+        // If the retired provider was the profile default, clear it —
+        // the auto-assign step below will pick a new default on next save.
+        if (d.default_provider === rp.id) {
+          d.default_provider = '';
+          d.default_model = '';
+        }
+        console.warn('[UP] Stripped retired provider "' + rp.id + '" from user data.');
+        continue;
+      }
+      keptProviders.push(rp);
+    }
+    d.providers = keptProviders;
+
     // Backward compat: migrate providers that don't have the 'enabled' field
     // If a provider has active=true + key_verified=true, set enabled=true (preserve old state)
     for (var bi = 0; bi < d.providers.length; bi++) {
@@ -188,7 +221,18 @@
       }
     }
 
-    S.currentView = readHash();
+    // Resolve initial route. readHash() may return either a top-level
+    // view id ('dashboard'|'providers'|'models') or the parameterised
+    // editor route ('provider/<id>'). The renderCurrentView switch
+    // expects the *resolved* view id, so we split out the providerId
+    // and set both fields here.
+    var initialHash = readHash();
+    if (initialHash.indexOf(PROVIDER_EDITOR_HASH_PREFIX) === 0) {
+      S.currentView = 'provider-editor';
+      S.editingProviderId = initialHash.slice(PROVIDER_EDITOR_HASH_PREFIX.length);
+    } else {
+      S.currentView = initialHash;
+    }
   }
 
   // ============================================================

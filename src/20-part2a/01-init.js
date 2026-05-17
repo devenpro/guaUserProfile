@@ -68,9 +68,13 @@
     buildLLMConfig = window._upBuildLLMConfig;
     Constants = window._upConstants;
 
-    // Register renderers
+    // Register renderers — these are looked up by Part 1's
+    // renderCurrentView (06-navigation.js) and by event handlers in
+    // 12-events.js. The full-page provider editor lives in Part 2A
+    // because it shares verify/save logic with the rest of this part.
     var R = window._upRenderers = window._upRenderers || {};
-    R.openProviderModal = openProviderModal;
+    R.providerEditor = renderProviderEditor;
+    R.setupProviderEditorEvents = setupProviderEditorEvents;
     R.openAddCustomProviderModal = openAddCustomProviderModal;
 
     // Wrap handler-setup so a failure here does not cascade into Part 2B.

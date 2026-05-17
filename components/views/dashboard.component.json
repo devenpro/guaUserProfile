@@ -1,9 +1,9 @@
 {
   "name": "dashboard",
   "type": "view",
-  "summary": "Renders the #dashboard hash route. Shows the active provider grid (one card per enabled provider with model count + key status) and the recent activity feed (collapsed to last 5 by default, expandable to last 50).",
+  "summary": "Renders the #dashboard hash route. Shows the active provider grid (one card per enabled provider with model count + key status), the welcome guide (only when zero providers configured), the Recommended Providers rail (lists unconfigured RECOMMENDED_ORDER providers — Gemini, Groq, Hugging Face, OpenRouter, Mistral, DeepSeek, Together — visible as long as ≥1 is still unconfigured), and the recent activity feed (collapsed to last 5 by default, expandable to last 50).",
   "entry": "renderDashboard",
-  "source": "src/10-part1/up-part1.js:780",
+  "source": "src/10-part1/09-dashboard.js:4",
   "triggers": [
     "navigate('dashboard')",
     "hashchange to #dashboard",
@@ -13,11 +13,13 @@
   "reads": {
     "state": [
       "S.data.providers",
+      "S.providerMap",
       "S.activeProviders",
       "S.data.activity",
       "S.activityExpanded",
       "S.exportableCount",
       "S.verifiedCount",
+      "S.configuredCount",
       "S.totalActiveModels",
       "S.user"
     ],
@@ -38,8 +40,16 @@
     {
       "scenario": "Empty activity log",
       "handling": "Activity panel renders an empty-state hint; not a crash"
+    },
+    {
+      "scenario": "Zero providers configured",
+      "handling": "Welcome guide card renders at top with a 'Start with <top-recommended>' CTA; Recommended rail below offers one-click setup for Gemini/Groq/Hugging Face/OpenRouter/Mistral/DeepSeek/Together"
+    },
+    {
+      "scenario": "All RECOMMENDED_ORDER providers already have keys",
+      "handling": "Recommended rail returns empty string and is omitted from the rendered output"
     }
   ],
-  "tags": ["view", "dashboard", "activity", "stats", "provider-grid"],
-  "related": ["providers", "models"]
+  "tags": ["view", "dashboard", "activity", "stats", "provider-grid", "recommended", "welcome", "onboarding"],
+  "related": ["providers", "models", "provider-editor"]
 }

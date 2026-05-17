@@ -13,7 +13,7 @@ Part 1 sets **25 globals** on `window` at the end of init (Part 1 §15, lines 13
 | Global | Type | Description |
 |--------|------|-------------|
 | `window._upState` | Object | Full state object `S` — see [ARCHITECTURE.md §2](./ARCHITECTURE.md#2-state-object-s) |
-| `window._upConstants` | Object | `{ APP_VIEWS, MODEL_CATALOG, PROVIDER_ORDER, ACTIVITY_TYPES, CATEGORY_LABELS }` |
+| `window._upConstants` | Object | `{ APP_VIEWS, MODEL_CATALOG, PROVIDER_ORDER, RECOMMENDED_ORDER, REMOVED_PROVIDERS, PROVIDER_EDITOR_HASH_PREFIX, ACTIVITY_TYPES, CATEGORY_LABELS }` |
 | `window._upRenderers` | Object | Renderer registry — see [§Renderer Registry](#renderer-registry-window_uprenderers) below |
 
 ### Core Functions
@@ -21,7 +21,7 @@ Part 1 sets **25 globals** on `window` at the end of init (Part 1 §15, lines 13
 | Global | Signature | Description |
 |--------|-----------|-------------|
 | `_upRender` | `()` | Re-renders the current view into `#upContent` |
-| `_upNavigate` | `(viewId)` | Navigate to view: `'dashboard'`, `'providers'`, `'models'` |
+| `_upNavigate` | `(target)` | Navigate to a top-level view (`'dashboard'`, `'providers'`, `'models'`) or the parameterised editor route (`'provider/<id>'`). Updates `window.location.hash` and re-renders. |
 | `_upToast` | `(msg, type?, duration?)` | Show toast. Types: `'success'`, `'error'`, `'warning'`, `'info'`. Default duration 3000ms |
 | `_upGenerateId` | `(prefix?)` | Returns `prefix + '_' + base36(timestamp) + base36(random)` |
 | `_upBuildMaps` | `()` | Rebuilds `providerMap`, `activeProviders`, and all 5 counts |
@@ -73,12 +73,12 @@ Part 1 sets **25 globals** on `window` at the end of init (Part 1 §15, lines 13
 | `closeModal` | `()` | Close current modal, clear `currentModal` reference |
 | `openConfirmDialog` | `({ title, message, confirmLabel?, danger?, onConfirm })` | Yes/no dialog |
 | `closeConfirmDialog` | `()` | Programmatically close confirm dialog |
-| `openProviderModal` | `(providerId)` | Open 3-step config modal: key → models → params. Works for catalog AND custom providers (synthesizes `catInfo` for customs) |
-| `saveProviderFromModal` | `(providerId?)` | Collect form fields, save provider, auto-assign profile default if none exists |
-| `removeProvider` | `(providerId)` | Confirm dialog → clear key/models/enabled, reassign profile default to next eligible provider |
+| `renderProviderEditor` | `(providerId) => string` (HTML) | Render the full-page provider editor at `#provider/<id>`. Two-column layout: form (key+verify, models, params) + guide panel. Replaces v0.1.x `openProviderModal`. |
+| `saveProviderFromEditor` | `(providerId)` | Collect form fields from the editor view, save provider, auto-assign profile default if none exists, navigate back to previous view |
+| `removeProvider` | `(providerId)` | Confirm dialog → clear key/models/enabled, reassign profile default to next eligible provider. If called from the editor on the same provider, navigates to Providers list. |
 | `openChangeDefaultModal` | `()` | Provider + model dropdowns for profile default |
 | `openAddCustomProviderModal` | `()` | Modal: name, ID (auto-derived from name), endpoint URL, API key → creates custom provider + auto-verifies |
-| `verifyApiKey` | `(providerId)` | Modal verification — reads key from `#upProviderKey` input, calls `buildTestRequest`, updates UI |
+| `verifyApiKey` | `(providerId)` | Reads key from `#upProviderKey`, calls `buildTestRequest`, updates UI. Works in both the editor view and (legacy) modal — on success calls `render()` so the surface redraws naturally. |
 | `quickTestConnection` | `(providerId, callback?)` | Inline test without modal. Callback signature: `(success: boolean) => void` |
 | `testAllConnections` | `()` | Sequentially calls `quickTestConnection` on every provider with a key entered, 500ms apart |
 
@@ -110,7 +110,8 @@ A public extension point for replacing view renderers without modifying Part 1.
 
 | Key | Type | Called by |
 |-----|------|----------|
-| `openProviderModal` | `(providerId) => void` | Part 1 click handler for `data-action="open-provider"` |
+| `providerEditor` | `(providerId) => string` (HTML) | `renderCurrentView()` for `S.currentView === 'provider-editor'` |
+| `setupProviderEditorEvents` | `() => void` | Called by `renderCurrentView()` immediately after the editor HTML is injected |
 | `openAddCustomProviderModal` | `() => void` | Part 1 click handler for `data-action="add-custom-provider"` |
 
 **Available but unused — extension seam for future Parts:**

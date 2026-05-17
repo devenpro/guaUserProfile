@@ -1,0 +1,66 @@
+{
+  "name": "provider-editor",
+  "type": "view",
+  "summary": "Full-page provider configuration view at hash #provider/<id>. Replaces the v0.1.x modal-based 3-step configurator. Two-column layout: left column hosts the API-key + verify form, model selection list, and default parameter controls; right column hosts the per-provider guide (signup link, key URL, free-tier note, ordered setup steps, troubleshooting list — all sourced from MODEL_CATALOG[id].guide). Reuses the same form-field IDs as the old modal (#upProviderKey, #upParamTemp, .up-mm-toggle, .up-mm-star) so 08-events.js handlers work unchanged. Sticky action bar at the bottom of the left column hosts Cancel/Save/Remove.",
+  "entry": "renderProviderEditor",
+  "source": "src/20-part2a/04b-provider-editor-view.js:23",
+  "triggers": [
+    "navigate('provider/<id>')",
+    "hashchange to #provider/<id>",
+    "click on any [data-action=\"open-provider\"] element (dashboard active cards, Recommended rail cards, providers list cards, welcome guide CTA)"
+  ],
+  "reads": {
+    "state": [
+      "S.providerMap[id]",
+      "S.editingProviderId",
+      "S.previousView",
+      "Constants.MODEL_CATALOG[id]",
+      "Constants.CATEGORY_LABELS"
+    ],
+    "dom": [
+      "#upProviderKey value",
+      "#upParamTemp value",
+      "#upParamTokens value",
+      "#upParamTopP value",
+      ".up-mm-toggle (per-model checkbox state)",
+      ".up-mm-star.up-star--on (default-model selection)"
+    ],
+    "network": []
+  },
+  "writes": {
+    "state": [
+      "S.providerMap[id].api_key (via key-verify handler)",
+      "S.providerMap[id].key_verified, key_verified_at (via verify-key handler)",
+      "S.providerMap[id].models[*].active, is_default, temperature, max_tokens, top_p (on save)",
+      "S.providerMap[id].enabled, active (on save / verify)",
+      "S.data.default_provider, default_model (auto-assigned on first save when none exists)",
+      "S.previousView, S.currentView, S.editingProviderId (via navigate)"
+    ],
+    "dom": [
+      "#upContent innerHTML (full re-render via renderCurrentView)",
+      "window.location.hash"
+    ],
+    "network": []
+  },
+  "produces_html": true,
+  "failure_modes": [
+    {
+      "scenario": "Provider id in URL does not exist in S.providerMap",
+      "handling": "navigate() falls back to 'dashboard'. If the route is reached directly (e.g. bookmark to a retired provider like #provider/claude), renderProviderEditor renders a 'Provider not found' empty state with a Back-to-Providers button."
+    },
+    {
+      "scenario": "Custom provider with no MODEL_CATALOG entry",
+      "handling": "Synthesises a catInfo from prov.* fields and renders a fallback 'Custom provider' card in place of the guide column."
+    },
+    {
+      "scenario": "Part 2A not yet loaded when renderCurrentView dispatches to R.providerEditor",
+      "handling": "06-navigation.js falls back to a 'Loading editor…' empty state until Part 2A registers the renderer and triggers its own render()."
+    },
+    {
+      "scenario": "Key verify failed but user clicked Save",
+      "handling": "Save button is disabled until key_verified is true (visible in the editor as a disabled button with a 'Verify the API key first' tooltip)."
+    }
+  ],
+  "tags": ["view", "provider-editor", "configuration", "guide", "full-page", "hash-route"],
+  "related": ["dashboard", "providers", "models", "key-verify"]
+}

@@ -1,7 +1,7 @@
 {
   "name": "providers",
   "type": "view",
-  "summary": "Renders the #providers hash route. Full provider list with a 5-filter toolbar (all / configured / unconfigured / major / infra), inline quick-test button per row, enable/disable toggle, and a Configure/Manage button that opens the Part-2A provider modal.",
+  "summary": "Renders the #providers hash route. Full provider list with a 5-filter toolbar (all / configured / unconfigured / major / infra), inline quick-test button per row, enable/disable toggle, and a Configure/Manage button that navigates to the full-page provider editor at #provider/<id> (v0.2.0+ — previously opened a modal).",
   "entry": "renderProviders",
   "source": "src/10-part1/up-part1.js:878",
   "triggers": [
@@ -37,5 +37,5 @@
     }
   ],
   "tags": ["view", "providers", "filter-toolbar", "quick-test", "enable-toggle"],
-  "related": ["dashboard", "models", "key-verify"]
+  "related": ["dashboard", "models", "provider-editor", "key-verify"]
 }

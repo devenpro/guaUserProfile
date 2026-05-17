@@ -35,20 +35,10 @@ One-page cheat sheet. For depth, see [ARCHITECTURE.md](./ARCHITECTURE.md), [DEVE
 
 | View | Hash | Content |
 |------|------|---------|
-| Dashboard | `#dashboard` | Active provider card grid + recent activity feed |
-| Providers | `#providers` | All 14+ providers with filter toolbar, quick test, manage |
+| Dashboard | `#dashboard` | Welcome guide (when empty), active provider card grid, Recommended Free Providers rail, recent activity feed |
+| Providers | `#providers` | All 13+ providers with filter toolbar, quick test, free-tier badge, manage |
 | Models | `#models` | Per-provider model tables with toggle, search, bulk actions |
-
-## File Sizes (v1.0)
-
-| File | Lines |
-|------|-------|
-| `up-part1.js` | 1,403 |
-| `up-part2a.js` | 1,150 |
-| `up-part2b.js` | 684 |
-| `up-part1.css` | 334 |
-| `up-part2.css` | 140 |
-| **Total** | **~3,711** |
+| Provider editor | `#provider/<id>` | Full-page two-column editor — config form on the left, per-provider guide on the right. Replaces the v0.1.x modal. |
 
 ## Provider States (4 states)
 
@@ -68,7 +58,7 @@ One-page cheat sheet. For depth, see [ARCHITECTURE.md](./ARCHITECTURE.md), [DEVE
 | `syncToTextarea()` | Part 1 | Write both fields + mark dirty |
 | `buildTestRequest()` | Part 2A | Build fetch config for any provider |
 | `quickTestConnection()` | Part 2A | Inline connectivity test |
-| `openProviderModal()` | Part 2A | 3-step config modal |
+| `renderProviderEditor()` | Part 2A | Full-page provider editor view (#provider/<id>) |
 | `openAddCustomProviderModal()` | Part 2A | Add user-defined provider |
 | `liveRefreshModels()` | Part 2B | Fetch model list from API |
 | `resetAllProviders()` | Part 2B | Clear everything (with confirm) |
@@ -141,15 +131,21 @@ Never skip `syncToTextarea()` — it's the only place `field_llm_config` gets wr
 - **Part 2A**: 14 handlers (modal, CRUD, verify, test) + modal-internal field events
 - **Part 2B**: 8 handlers (export, import, bulk, reset, refresh)
 
-## Providers in Catalog (14)
+## Providers in Catalog (13)
 
-**Major (8):** Gemini, Claude, OpenAI, Grok, Perplexity, DeepSeek, Mistral, Cohere
+**Major (7):** Gemini, OpenAI, Grok, Perplexity, DeepSeek, Mistral, Cohere
 **Infra (6):** Groq, GitHub Models, NVIDIA, Hugging Face, Together AI, OpenRouter
 
-Custom providers (user-added) work identically — same modal, same test flow, same export logic.
+**Removed in v0.2.0:** Claude (Anthropic's direct API is browser-hostile; route via OpenRouter `anthropic/claude-sonnet-4` instead).
 
-## Live Refresh Support (8 of 14)
+Custom providers (user-added) work identically — same editor, same test flow, same export logic.
+
+### Recommended (free tier, dashboard rail)
+
+`RECOMMENDED_ORDER = ['gemini', 'groq', 'huggingface', 'openrouter', 'mistral', 'deepseek', 'together']`
+
+## Live Refresh Support (8 of 13)
 
 Providers with working `/v1/models` discovery: openai, groq, mistral, together, openrouter, nvidia, deepseek, perplexity.
 
-Others (gemini, claude, grok, github, cohere, huggingface) get an info toast — catalog models are used as-is.
+Others (gemini, grok, github, cohere, huggingface) get an info toast — catalog models are used as-is.

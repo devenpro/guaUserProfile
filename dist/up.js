@@ -1,6 +1,6 @@
-/* User Profile v0.1.4 · built 2026-05-16T14:13:26.692Z · 34 source files (see src/) */
-window.UP_VERSION = "0.1.4";
-window.UP_BUILD_TIME = "2026-05-16T14:13:26.692Z";
+/* User Profile v0.2.0 · built 2026-05-17T05:50:46.791Z · 35 source files (see src/) */
+window.UP_VERSION = "0.2.0";
+window.UP_BUILD_TIME = "2026-05-17T05:50:46.791Z";
 
 /* ===== src/10-part1/00-header.js ===== */
 /**
@@ -55,12 +55,43 @@ window.UP_BUILD_TIME = "2026-05-16T14:13:26.692Z";
     'models':     { order: 3, label: 'Models',      icon: 'layer-group', description: 'Model management' }
   };
 
+  // Special parameterised route — not in APP_VIEWS because it takes an
+  // `:id` path segment (#provider/<id>) and is not shown in the sidebar.
+  var PROVIDER_EDITOR_HASH_PREFIX = 'provider/';
+
+  // Per-provider guide block. Surfaced in the full-page editor's right
+  // column and in the dashboard "Recommended Providers" rail.
+  //   signup_url:      where to register an account
+  //   key_url:         deep link to the API-key page inside the provider's dashboard
+  //   key_format:      human-readable hint about the API key's prefix/shape
+  //   free_tier:       short note about free quota (empty string if paid-only)
+  //   steps:           ordered { title, body } pairs walking through key setup
+  //   troubleshooting: { issue, fix } pairs for common verify failures
   var MODEL_CATALOG = {
     'gemini': {
       label: 'Gemini', icon: 'sparkles', category: 'major',
       desc: "Google's multimodal AI family", color: '#4285F4',
       test_endpoint: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent',
       test_method: 'gemini',
+      free_tier: true,
+      recommended_rank: 1,
+      guide: {
+        signup_url: 'https://aistudio.google.com/',
+        key_url: 'https://aistudio.google.com/app/apikey',
+        key_format: 'Starts with "AIza" — about 39 characters.',
+        free_tier: 'Free tier with generous daily quota for Gemini 2.5 Flash and Flash Lite. No credit card required to start.',
+        steps: [
+          { title: 'Sign in with Google',  body: 'Open Google AI Studio and sign in with any Google account.' },
+          { title: 'Create an API key',    body: 'In AI Studio, click "Get API key" and then "Create API key". Pick "Create API key in a new project" if you do not already have one.' },
+          { title: 'Copy the key',         body: 'Copy the AIza… string and paste it into the API Key field on the left. The key is shown only once — store it somewhere safe.' },
+          { title: 'Verify',               body: 'Click "Verify Key". We send a 1-token "Hello" request to confirm the key works. On success, the model picker unlocks.' }
+        ],
+        troubleshooting: [
+          { issue: 'API_KEY_INVALID or 400 error',  fix: 'You may have pasted the key with whitespace or trimmed it. Re-copy from AI Studio.' },
+          { issue: 'Quota exceeded',                fix: 'Free-tier quota resets daily. Switch to a different free model (e.g., Flash Lite) or wait.' },
+          { issue: 'Region blocked',                fix: 'Gemini API is unavailable in some regions. A VPN or paid OpenRouter route can be used instead.' }
+        ]
+      },
       models: [
         { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash', category: 'fast', default_temp: 0.7, max_tokens: 8192 },
         { id: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro', category: 'powerful', default_temp: 0.7, max_tokens: 8192 },
@@ -68,22 +99,30 @@ window.UP_BUILD_TIME = "2026-05-16T14:13:26.692Z";
         { id: 'gemini-2.0-flash-lite', label: 'Gemini 2.0 Flash Lite', category: 'fast', default_temp: 0.7, max_tokens: 8192 }
       ]
     },
-    'claude': {
-      label: 'Claude', icon: 'robot', category: 'major',
-      desc: "Anthropic's reasoning-first AI", color: '#D97706',
-      test_endpoint: 'https://api.anthropic.com/v1/messages',
-      test_method: 'claude',
-      models: [
-        { id: 'claude-opus-4-6', label: 'Claude Opus 4.6', category: 'powerful', default_temp: 0.7, max_tokens: 4096 },
-        { id: 'claude-sonnet-4-6', label: 'Claude Sonnet 4.6', category: 'balanced', default_temp: 0.7, max_tokens: 8192 },
-        { id: 'claude-haiku-4-5-20251001', label: 'Claude Haiku 4.5', category: 'fast', default_temp: 0.8, max_tokens: 8192 }
-      ]
-    },
     'openai': {
       label: 'OpenAI', icon: 'cpu', category: 'major',
       desc: 'GPT & o-series models', color: '#10A37F',
       test_endpoint: 'https://api.openai.com/v1/chat/completions',
       test_method: 'openai',
+      free_tier: false,
+      recommended_rank: null,
+      guide: {
+        signup_url: 'https://platform.openai.com/signup',
+        key_url: 'https://platform.openai.com/api-keys',
+        key_format: 'Starts with "sk-" — about 50+ characters.',
+        free_tier: 'Pay-as-you-go. No free monthly credit for new accounts in most regions; you must add a payment method before keys will work.',
+        steps: [
+          { title: 'Create an account',     body: 'Sign up at platform.openai.com and verify your phone number.' },
+          { title: 'Add a payment method',  body: 'OpenAI keys do not work until billing is set up. Add a card under Settings → Billing.' },
+          { title: 'Create a secret key',   body: 'Open the API keys page and click "Create new secret key". Copy the sk-… string before you close the dialog — it is not shown again.' },
+          { title: 'Verify',                body: 'Paste the key into the field on the left and click Verify. We make a 1-token chat request to confirm it works.' }
+        ],
+        troubleshooting: [
+          { issue: '401 Unauthorized',              fix: 'Key is wrong or revoked. Generate a new one.' },
+          { issue: 'You exceeded your current quota', fix: 'Add a payment method and at least USD $5 in prepaid credit.' },
+          { issue: 'Insufficient permissions',      fix: 'If using a project-scoped key, ensure the project has access to the model you want to test.' }
+        ]
+      },
       models: [
         { id: 'gpt-4.1', label: 'GPT-4.1', category: 'powerful', default_temp: 0.7, max_tokens: 8192 },
         { id: 'gpt-4.1-mini', label: 'GPT-4.1 Mini', category: 'fast', default_temp: 0.7, max_tokens: 4096 },
@@ -96,6 +135,22 @@ window.UP_BUILD_TIME = "2026-05-16T14:13:26.692Z";
       desc: "xAI's conversational AI", color: '#1DA1F2',
       test_endpoint: 'https://api.x.ai/v1/chat/completions',
       test_method: 'openai',
+      free_tier: false,
+      recommended_rank: null,
+      guide: {
+        signup_url: 'https://console.x.ai/',
+        key_url: 'https://console.x.ai/team/default/api-keys',
+        key_format: 'Starts with "xai-" — long alphanumeric.',
+        free_tier: 'Limited monthly free credits on signup, then pay-as-you-go.',
+        steps: [
+          { title: 'Sign up for xAI Console',  body: 'Create an account at console.x.ai using your X (Twitter) login or email.' },
+          { title: 'Create an API key',        body: 'In the Console, open "API Keys" and create a new key. Give it permission to call the Chat endpoint.' },
+          { title: 'Verify',                   body: 'Paste the xai-… key and click Verify.' }
+        ],
+        troubleshooting: [
+          { issue: '403 Forbidden', fix: 'Your key may not have chat permissions. Edit the key in the Console and enable Chat Completions.' }
+        ]
+      },
       models: [
         { id: 'grok-3', label: 'Grok 3', category: 'powerful', default_temp: 0.7, max_tokens: 8192 },
         { id: 'grok-3-mini', label: 'Grok 3 Mini', category: 'fast', default_temp: 0.7, max_tokens: 8192 }
@@ -106,6 +161,20 @@ window.UP_BUILD_TIME = "2026-05-16T14:13:26.692Z";
       desc: 'Search-augmented AI answers', color: '#20B2AA',
       test_endpoint: 'https://api.perplexity.ai/chat/completions',
       test_method: 'openai',
+      free_tier: false,
+      recommended_rank: null,
+      guide: {
+        signup_url: 'https://www.perplexity.ai/settings/api',
+        key_url: 'https://www.perplexity.ai/settings/api',
+        key_format: 'Starts with "pplx-".',
+        free_tier: 'Free monthly API credit for Perplexity Pro subscribers. Pay-as-you-go above that.',
+        steps: [
+          { title: 'Sign in to Perplexity', body: 'Log into perplexity.ai and open Settings → API.' },
+          { title: 'Generate an API key',   body: 'Click "Generate" and copy the pplx-… token.' },
+          { title: 'Verify',                body: 'Paste and verify — the Sonar models are queried for the test.' }
+        ],
+        troubleshooting: []
+      },
       models: [
         { id: 'sonar-pro', label: 'Sonar Pro', category: 'powerful', default_temp: 0.7, max_tokens: 8192 },
         { id: 'sonar', label: 'Sonar', category: 'balanced', default_temp: 0.7, max_tokens: 8192 },
@@ -117,6 +186,22 @@ window.UP_BUILD_TIME = "2026-05-16T14:13:26.692Z";
       desc: 'Open-source reasoning models', color: '#5B6CF0',
       test_endpoint: 'https://api.deepseek.com/chat/completions',
       test_method: 'openai',
+      free_tier: true,
+      recommended_rank: 6,
+      guide: {
+        signup_url: 'https://platform.deepseek.com/',
+        key_url: 'https://platform.deepseek.com/api_keys',
+        key_format: 'Starts with "sk-" — DeepSeek follows the OpenAI key shape.',
+        free_tier: 'Promotional free credits on signup (subject to change). Otherwise very low-cost pay-as-you-go.',
+        steps: [
+          { title: 'Sign up at platform.deepseek.com',  body: 'Create an account with email or GitHub.' },
+          { title: 'Create API key',                    body: 'Open "API Keys" and click "Create new API key". Copy the sk-… string.' },
+          { title: 'Verify',                            body: 'Paste the key and verify.' }
+        ],
+        troubleshooting: [
+          { issue: '402 Insufficient Balance', fix: 'Top up your account from the Billing page — even the free promotional credit needs to be activated first.' }
+        ]
+      },
       models: [
         { id: 'deepseek-r1', label: 'DeepSeek R1', category: 'powerful', default_temp: 0.6, max_tokens: 8192 },
         { id: 'deepseek-v3', label: 'DeepSeek V3', category: 'balanced', default_temp: 0.7, max_tokens: 8192 },
@@ -128,6 +213,22 @@ window.UP_BUILD_TIME = "2026-05-16T14:13:26.692Z";
       desc: 'Ultra-fast LPU inference', color: '#F55036',
       test_endpoint: 'https://api.groq.com/openai/v1/chat/completions',
       test_method: 'openai',
+      free_tier: true,
+      recommended_rank: 2,
+      guide: {
+        signup_url: 'https://console.groq.com/',
+        key_url: 'https://console.groq.com/keys',
+        key_format: 'Starts with "gsk_".',
+        free_tier: 'Generous free tier with daily token + request limits. No credit card required.',
+        steps: [
+          { title: 'Sign in to Groq Cloud',  body: 'Open console.groq.com and sign in with Google or GitHub.' },
+          { title: 'Create an API key',      body: 'In the side nav, open "API Keys" and click "Create API Key". Name it (e.g. "User Profile App") and copy the gsk_… string.' },
+          { title: 'Verify',                 body: 'Paste the key on the left and click Verify. The default Llama-3.3-70B model is used for the test.' }
+        ],
+        troubleshooting: [
+          { issue: 'Rate-limited (429)',     fix: 'Free tier has per-minute caps. Wait a minute or upgrade.' }
+        ]
+      },
       models: [
         { id: 'llama-3.3-70b-versatile', label: 'Llama 3.3 70B', category: 'balanced', default_temp: 0.7, max_tokens: 8192 },
         { id: 'llama-3.1-8b-instant', label: 'Llama 3.1 8B', category: 'fast', default_temp: 0.8, max_tokens: 8192 },
@@ -139,6 +240,21 @@ window.UP_BUILD_TIME = "2026-05-16T14:13:26.692Z";
       desc: 'European open-weight AI', color: '#FF7000',
       test_endpoint: 'https://api.mistral.ai/v1/chat/completions',
       test_method: 'openai',
+      free_tier: true,
+      recommended_rank: 5,
+      guide: {
+        signup_url: 'https://console.mistral.ai/',
+        key_url: 'https://console.mistral.ai/api-keys/',
+        key_format: 'Mixed alphanumeric, no fixed prefix.',
+        free_tier: 'La Plateforme "experiment" tier — free for testing, rate-limited. Paid tier for production.',
+        steps: [
+          { title: 'Create a Mistral account',  body: 'Sign up at console.mistral.ai and verify your email.' },
+          { title: 'Subscribe to a workspace',  body: 'Pick the free "Experiment" plan to start.' },
+          { title: 'Create an API key',         body: 'Open "API keys" and create one. Copy the key when shown.' },
+          { title: 'Verify',                    body: 'Paste and verify — mistral-small-latest is used for the test.' }
+        ],
+        troubleshooting: []
+      },
       models: [
         { id: 'mistral-large-latest', label: 'Mistral Large', category: 'powerful', default_temp: 0.7, max_tokens: 8192 },
         { id: 'mistral-small-latest', label: 'Mistral Small', category: 'fast', default_temp: 0.7, max_tokens: 8192 },
@@ -150,6 +266,22 @@ window.UP_BUILD_TIME = "2026-05-16T14:13:26.692Z";
       desc: 'GitHub-hosted model marketplace', color: '#24292F',
       test_endpoint: 'https://models.inference.ai.azure.com/chat/completions',
       test_method: 'openai',
+      free_tier: true,
+      recommended_rank: null,
+      guide: {
+        signup_url: 'https://github.com/marketplace/models',
+        key_url: 'https://github.com/settings/tokens',
+        key_format: 'Fine-grained personal access token — "github_pat_…" or classic "ghp_…".',
+        free_tier: 'Free for personal use with rate limits — designed for prototyping. Production use requires Azure AI Foundry.',
+        steps: [
+          { title: 'Open GitHub Models marketplace',  body: 'Visit github.com/marketplace/models and pick a model to confirm access.' },
+          { title: 'Create a personal access token',  body: 'Open Settings → Developer settings → Personal access tokens → Fine-grained tokens. Create a token with the "Models" permission set to "Read & write".' },
+          { title: 'Verify',                          body: 'Paste the token and click Verify.' }
+        ],
+        troubleshooting: [
+          { issue: '403 Forbidden', fix: 'Token does not have the Models permission. Recreate it with the right scope.' }
+        ]
+      },
       models: [
         { id: 'gpt-4o', label: 'GPT-4o (GitHub)', category: 'balanced', default_temp: 0.7, max_tokens: 4096 },
         { id: 'Phi-4', label: 'Phi-4', category: 'fast', default_temp: 0.7, max_tokens: 4096 },
@@ -161,6 +293,20 @@ window.UP_BUILD_TIME = "2026-05-16T14:13:26.692Z";
       desc: 'Enterprise NLP & RAG models', color: '#39594D',
       test_endpoint: 'https://api.cohere.com/v2/chat',
       test_method: 'cohere',
+      free_tier: true,
+      recommended_rank: null,
+      guide: {
+        signup_url: 'https://dashboard.cohere.com/',
+        key_url: 'https://dashboard.cohere.com/api-keys',
+        key_format: 'Long alphanumeric string, no fixed prefix.',
+        free_tier: 'Free trial API keys are rate-limited but unlimited in duration. Production keys are paid.',
+        steps: [
+          { title: 'Create a Cohere account',  body: 'Sign up at dashboard.cohere.com.' },
+          { title: 'Pick a trial key',         body: 'Cohere auto-generates a trial key on signup — visible under API Keys. Copy it.' },
+          { title: 'Verify',                   body: 'Paste and verify — Cohere uses a v2 chat endpoint.' }
+        ],
+        troubleshooting: []
+      },
       models: [
         { id: 'command-r-plus', label: 'Command R+', category: 'powerful', default_temp: 0.7, max_tokens: 4096 },
         { id: 'command-r', label: 'Command R', category: 'balanced', default_temp: 0.7, max_tokens: 4096 }
@@ -171,6 +317,20 @@ window.UP_BUILD_TIME = "2026-05-16T14:13:26.692Z";
       desc: 'NVIDIA NIM endpoints', color: '#76B900',
       test_endpoint: 'https://integrate.api.nvidia.com/v1/chat/completions',
       test_method: 'openai',
+      free_tier: true,
+      recommended_rank: null,
+      guide: {
+        signup_url: 'https://build.nvidia.com/',
+        key_url: 'https://build.nvidia.com/',
+        key_format: 'Starts with "nvapi-".',
+        free_tier: 'Free monthly credits for personal accounts — enough to evaluate Llama, Mixtral, Nemotron etc.',
+        steps: [
+          { title: 'Sign in to NVIDIA Build',  body: 'Open build.nvidia.com and sign in with an NVIDIA account.' },
+          { title: 'Open any model',           body: 'Pick a model card; the right-hand "Get API Key" button reveals your nvapi-… token.' },
+          { title: 'Verify',                   body: 'Paste and verify.' }
+        ],
+        troubleshooting: []
+      },
       models: [
         { id: 'meta/llama-3.1-405b-instruct', label: 'Llama 3.1 405B', category: 'powerful', default_temp: 0.7, max_tokens: 4096 },
         { id: 'meta/llama-3.1-70b-instruct', label: 'Llama 3.1 70B', category: 'balanced', default_temp: 0.7, max_tokens: 4096 }
@@ -181,6 +341,23 @@ window.UP_BUILD_TIME = "2026-05-16T14:13:26.692Z";
       desc: 'Open model hub router', color: '#FFD21E',
       test_endpoint: 'https://router.huggingface.co/v1/chat/completions',
       test_method: 'openai',
+      free_tier: true,
+      recommended_rank: 3,
+      guide: {
+        signup_url: 'https://huggingface.co/join',
+        key_url: 'https://huggingface.co/settings/tokens',
+        key_format: 'Starts with "hf_".',
+        free_tier: 'Free serverless inference with shared rate limits. Pro accounts get higher quotas. Many open models route through here for zero cost.',
+        steps: [
+          { title: 'Create a Hugging Face account', body: 'Sign up at huggingface.co.' },
+          { title: 'Generate an access token',      body: 'Open Settings → Access Tokens → New token. Pick the "Read" role for inference-only use. Copy the hf_… string.' },
+          { title: 'Verify',                        body: 'Paste and verify — Qwen 2.5 72B is used for the test by default.' }
+        ],
+        troubleshooting: [
+          { issue: 'Model loading (503)',  fix: 'Some open models are cold-started on demand. Wait a few seconds and try again.' },
+          { issue: '401 Unauthorized',     fix: 'The token role must include inference. Regenerate with "Read" or higher.' }
+        ]
+      },
       models: [
         { id: 'Qwen/Qwen2.5-72B-Instruct', label: 'Qwen 2.5 72B', category: 'powerful', default_temp: 0.7, max_tokens: 8192 },
         { id: 'mistralai/Mistral-Small-24B-Instruct-2501', label: 'Mistral Small', category: 'fast', default_temp: 0.7, max_tokens: 8192 }
@@ -191,6 +368,20 @@ window.UP_BUILD_TIME = "2026-05-16T14:13:26.692Z";
       desc: 'Open-source model cloud', color: '#6366F1',
       test_endpoint: 'https://api.together.xyz/v1/chat/completions',
       test_method: 'openai',
+      free_tier: true,
+      recommended_rank: 7,
+      guide: {
+        signup_url: 'https://api.together.ai/signup',
+        key_url: 'https://api.together.ai/settings/api-keys',
+        key_format: 'Long alphanumeric, no fixed prefix.',
+        free_tier: 'Sign-up grants USD $1+ free credits — enough to evaluate Llama 405B, Qwen Coder, DeepSeek R1.',
+        steps: [
+          { title: 'Sign up for Together AI', body: 'Create an account at api.together.ai.' },
+          { title: 'Create an API key',       body: 'Open Settings → API Keys → Create. Copy the key.' },
+          { title: 'Verify',                  body: 'Paste and verify — the first catalog model is used for the test.' }
+        ],
+        troubleshooting: []
+      },
       models: [
         { id: 'meta-llama/Meta-Llama-3.1-405B-Instruct-Turbo', label: 'Llama 3.1 405B', category: 'powerful', default_temp: 0.7, max_tokens: 4096 },
         { id: 'Qwen/Qwen2.5-Coder-32B-Instruct', label: 'Qwen 2.5 Coder 32B', category: 'balanced', default_temp: 0.7, max_tokens: 8192 },
@@ -199,9 +390,26 @@ window.UP_BUILD_TIME = "2026-05-16T14:13:26.692Z";
     },
     'openrouter': {
       label: 'OpenRouter', icon: 'shuffle', category: 'infra',
-      desc: 'Multi-provider router', color: '#8B5CF6',
+      desc: 'Multi-provider router (incl. Claude, GPT-4, Gemini)', color: '#8B5CF6',
       test_endpoint: 'https://openrouter.ai/api/v1/chat/completions',
       test_method: 'openai',
+      free_tier: true,
+      recommended_rank: 4,
+      guide: {
+        signup_url: 'https://openrouter.ai/',
+        key_url: 'https://openrouter.ai/keys',
+        key_format: 'Starts with "sk-or-v1-".',
+        free_tier: 'Some routed models are completely free (look for "(free)" in the model list). Others charge a small markup over the upstream provider. This is the recommended route to reach Anthropic Claude from a browser because Anthropic\'s direct API is browser-hostile.',
+        steps: [
+          { title: 'Sign in to OpenRouter',   body: 'Sign in at openrouter.ai with Google, GitHub or email.' },
+          { title: 'Create an API key',       body: 'Open Keys → Create Key. Copy the sk-or-v1-… string.' },
+          { title: 'Verify',                  body: 'Paste and verify. The Gemini 2.5 Flash route is used for the connectivity test.' },
+          { title: 'Discover models',         body: 'After verifying, use "Refresh from API" inside the editor to pull the live list — there are hundreds of routes including Anthropic Claude, OpenAI GPT-4, Gemini and many free open-source models.' }
+        ],
+        troubleshooting: [
+          { issue: 'Free model returns 429', fix: 'Free routes have aggressive daily caps. Switch to another free model or add credit.' }
+        ]
+      },
       models: [
         { id: 'google/gemini-2.5-flash', label: 'Gemini 2.5 Flash (OR)', category: 'fast', default_temp: 0.7, max_tokens: 8192 },
         { id: 'anthropic/claude-sonnet-4', label: 'Claude Sonnet 4 (OR)', category: 'balanced', default_temp: 0.7, max_tokens: 8192 },
@@ -210,11 +418,29 @@ window.UP_BUILD_TIME = "2026-05-16T14:13:26.692Z";
     }
   };
 
-  // Ordered list of provider IDs for consistent iteration
+  // Ordered list of provider IDs for consistent iteration.
+  // NOTE: `claude` was removed in v0.2.0 — Anthropic's direct API is browser-hostile.
+  // Users who want Claude should route through OpenRouter (anthropic/claude-sonnet-4 etc.).
+  // Existing user data with id='claude' is stripped on migration.
   var PROVIDER_ORDER = [
-    'gemini', 'claude', 'openai', 'grok', 'perplexity', 'deepseek',
+    'gemini', 'openai', 'grok', 'perplexity', 'deepseek',
     'groq', 'mistral', 'github', 'cohere', 'nvidia', 'huggingface', 'together', 'openrouter'
   ];
+
+  // Providers we actively promote on the dashboard rail. Ordered most→least
+  // recommended. Synthesised from MODEL_CATALOG[*].recommended_rank where the
+  // value is a positive number; kept as a flat list here so the order can be
+  // tweaked without re-sorting at runtime.
+  var RECOMMENDED_ORDER = [
+    'gemini', 'groq', 'huggingface', 'openrouter', 'mistral', 'deepseek', 'together'
+  ];
+
+  // Providers retired from the catalog. Used by migrateData() to strip
+  // stale entries from user data on next load. Keys are the deprecated
+  // provider id; values explain why (for the activity log).
+  var REMOVED_PROVIDERS = {
+    'claude': 'Direct Anthropic API is browser-hostile. Use OpenRouter (anthropic/claude-sonnet-4) instead.'
+  };
 
   var ACTIVITY_TYPES = {
     'provider-configured': { icon: 'key', color: '#1a73e8' },
@@ -259,6 +485,7 @@ window.UP_BUILD_TIME = "2026-05-16T14:13:26.692Z";
     // UI state
     currentView: 'dashboard',
     previousView: null,
+    editingProviderId: null,    // Set when currentView === 'provider-editor' (hash #provider/<id>)
     providerFilter: 'all',
     modelSearch: '',
     activityExpanded: false,
@@ -414,6 +641,39 @@ window.UP_BUILD_TIME = "2026-05-16T14:13:26.692Z";
     d.activity = d.activity || [];
     if (!Array.isArray(d.activity)) d.activity = [];
 
+    // Strip providers that have been retired from the catalog (v0.2.0:
+    // claude — direct Anthropic API is browser-hostile). This IS a
+    // platform-wide breaking change: any consumer app reading
+    // field_llm_config for the stripped provider id will see it
+    // disappear on next save. The user explicitly opted in to this when
+    // adding provider-guide support.
+    var keptProviders = [];
+    for (var rmi = 0; rmi < d.providers.length; rmi++) {
+      var rp = d.providers[rmi];
+      if (REMOVED_PROVIDERS && REMOVED_PROVIDERS[rp.id]) {
+        // Log the removal so the activity feed shows it; the user (and
+        // any auditor) can trace exactly when the entry vanished.
+        d.activity.push({
+          id: 'act_migrate_' + rp.id + '_' + Date.now().toString(36),
+          type: 'provider-removed',
+          description: rp.label + ' provider retired from catalog: ' + REMOVED_PROVIDERS[rp.id],
+          timestamp: new Date().toISOString(),
+          user_id: S.user.id || '',
+          user_name: S.user.fullName || S.user.name || ''
+        });
+        // If the retired provider was the profile default, clear it —
+        // the auto-assign step below will pick a new default on next save.
+        if (d.default_provider === rp.id) {
+          d.default_provider = '';
+          d.default_model = '';
+        }
+        console.warn('[UP] Stripped retired provider "' + rp.id + '" from user data.');
+        continue;
+      }
+      keptProviders.push(rp);
+    }
+    d.providers = keptProviders;
+
     // Backward compat: migrate providers that don't have the 'enabled' field
     // If a provider has active=true + key_verified=true, set enabled=true (preserve old state)
     for (var bi = 0; bi < d.providers.length; bi++) {
@@ -466,7 +726,18 @@ window.UP_BUILD_TIME = "2026-05-16T14:13:26.692Z";
       }
     }
 
-    S.currentView = readHash();
+    // Resolve initial route. readHash() may return either a top-level
+    // view id ('dashboard'|'providers'|'models') or the parameterised
+    // editor route ('provider/<id>'). The renderCurrentView switch
+    // expects the *resolved* view id, so we split out the providerId
+    // and set both fields here.
+    var initialHash = readHash();
+    if (initialHash.indexOf(PROVIDER_EDITOR_HASH_PREFIX) === 0) {
+      S.currentView = 'provider-editor';
+      S.editingProviderId = initialHash.slice(PROVIDER_EDITOR_HASH_PREFIX.length);
+    } else {
+      S.currentView = initialHash;
+    }
   }
 
   // ============================================================
@@ -559,16 +830,44 @@ window.UP_BUILD_TIME = "2026-05-16T14:13:26.692Z";
   // SECTION 6: NAVIGATION
   // ============================================================
 
+  // Hash format:
+  //   #dashboard, #providers, #models  → top-level views in APP_VIEWS
+  //   #provider/<id>                    → full-page provider editor (parameterised)
+  //   anything else                     → falls back to #dashboard
   function readHash() {
     var h = window.location.hash.replace('#', '');
-    return APP_VIEWS[h] ? h : 'dashboard';
+    if (APP_VIEWS[h]) return h;
+    if (h.indexOf(PROVIDER_EDITOR_HASH_PREFIX) === 0 && h.length > PROVIDER_EDITOR_HASH_PREFIX.length) {
+      var id = h.slice(PROVIDER_EDITOR_HASH_PREFIX.length);
+      if (S.providerMap && S.providerMap[id]) return h;
+    }
+    return 'dashboard';
   }
 
-  function navigate(viewId) {
-    if (!APP_VIEWS[viewId]) viewId = 'dashboard';
+  // Accepts either a top-level view id ('dashboard'|'providers'|'models')
+  // or a parameterised editor route ('provider/<id>'). Anything else falls
+  // back to the dashboard.
+  function navigate(target) {
+    var view = 'dashboard';
+    var providerId = null;
+    var hashOut = 'dashboard';
+
+    if (APP_VIEWS[target]) {
+      view = target;
+      hashOut = target;
+    } else if (target && target.indexOf(PROVIDER_EDITOR_HASH_PREFIX) === 0) {
+      var id = target.slice(PROVIDER_EDITOR_HASH_PREFIX.length);
+      if (id && S.providerMap && S.providerMap[id]) {
+        view = 'provider-editor';
+        providerId = id;
+        hashOut = target;
+      }
+    }
+
     S.previousView = S.currentView;
-    S.currentView = viewId;
-    window.location.hash = viewId;
+    S.currentView = view;
+    S.editingProviderId = providerId;
+    window.location.hash = hashOut;
     renderCurrentView();
   }
 
@@ -586,25 +885,37 @@ window.UP_BUILD_TIME = "2026-05-16T14:13:26.692Z";
     // by every other app on the platform.
     try {
       switch (S.currentView) {
-        case 'dashboard':  html = renderDashboard(); break;
-        case 'providers':  html = R.providers ? R.providers() : renderProviders(); break;
-        case 'models':     html = R.models ? R.models() : renderModels(); break;
-        default:           html = renderDashboard(); break;
+        case 'dashboard':       html = renderDashboard(); break;
+        case 'providers':       html = R.providers ? R.providers() : renderProviders(); break;
+        case 'models':          html = R.models ? R.models() : renderModels(); break;
+        case 'provider-editor':
+          if (R.providerEditor && S.editingProviderId) {
+            html = R.providerEditor(S.editingProviderId);
+          } else {
+            // Part 2A hasn't loaded yet (or no provider id) — show a
+            // loading shim so the page is not blank.
+            html = '<div class="up-empty-state"><div class="up-empty-state-icon">' + icon('clock') + '</div><div class="up-empty-state-title">Loading editor…</div><div class="up-empty-state-text">If this persists, refresh the page.</div></div>';
+          }
+          break;
+        default:                html = renderDashboard(); break;
       }
       $c.html(html);
 
       // Call view-specific event setup if registered
       if (S.currentView === 'providers' && R.setupProvidersEvents) R.setupProvidersEvents();
       if (S.currentView === 'models' && R.setupModelsEvents) R.setupModelsEvents();
+      if (S.currentView === 'provider-editor' && R.setupProviderEditorEvents) R.setupProviderEditorEvents();
     } catch (err) {
       console.error('[UP] renderCurrentView crashed for view "' + S.currentView + '":', err);
       $c.html(renderCrashCard(S.currentView, err));
     }
 
     // Update nav active state (always runs, even after a crash, so the
-    // sidebar reflects the requested view).
+    // sidebar reflects the requested view). The provider-editor sub-route
+    // highlights the Providers item so users have a "where am I" cue.
     $('.up-nav-item').removeClass('up-nav-item-active');
-    $('.up-nav-item[data-view="' + S.currentView + '"]').addClass('up-nav-item-active');
+    var navHighlight = S.currentView === 'provider-editor' ? 'providers' : S.currentView;
+    $('.up-nav-item[data-view="' + navHighlight + '"]').addClass('up-nav-item-active');
 
     // Update nav badges (defensively wrapped — counts may be stale if a
     // render path crashed mid-update, but the badges should still refresh
@@ -906,15 +1217,19 @@ window.UP_BUILD_TIME = "2026-05-16T14:13:26.692Z";
         html += '</div>';
       }
       html += '</div>';
-    } else {
-      // Empty state
-      html += '<div class="up-empty-state">';
-      html += '<div class="up-empty-state-icon">' + icon('bolt') + '</div>';
-      html += '<div class="up-empty-state-title">No active providers</div>';
-      html += '<div class="up-empty-state-text">Configure and enable a provider to get started.</div>';
-      html += '<button class="up-btn up-btn-primary" data-action="navigate" data-view="providers" style="margin-top:var(--up-space-4)">' + icon('plus') + ' Configure Provider</button>';
-      html += '</div>';
+    } else if (S.configuredCount === 0) {
+      // First-time empty state — show a welcome card walking the user
+      // through the 4-step "configure your first provider" flow. The
+      // Recommended Providers rail directly below this card gives them
+      // one-click access to the top free-tier providers.
+      html += renderWelcomeGuide();
     }
+
+    // Recommended free providers rail — listed regardless of whether
+    // the user already has some configured, as long as ≥1 of the
+    // recommended set is still unconfigured. Gives a permanent surface
+    // to add Gemini/Groq/HF/OpenRouter etc. without leaving the dash.
+    html += renderRecommendedProviders();
 
     // Activity feed
     html += '<div class="up-section">';
@@ -946,6 +1261,99 @@ window.UP_BUILD_TIME = "2026-05-16T14:13:26.692Z";
     html += '</div>';
 
     html += '</div>'; // view
+    return html;
+  }
+
+  // First-time welcome guide. Shown only when S.configuredCount === 0.
+  // The "Start with Gemini" CTA navigates straight to the full-page
+  // editor for Gemini (the top-recommended provider). If Gemini is
+  // missing for some reason (e.g., catalog edit), falls back to the
+  // first available recommended provider, then to the providers view.
+  function renderWelcomeGuide() {
+    var firstRec = null;
+    for (var i = 0; i < RECOMMENDED_ORDER.length; i++) {
+      if (S.providerMap[RECOMMENDED_ORDER[i]]) { firstRec = RECOMMENDED_ORDER[i]; break; }
+    }
+    var ctaLabel = firstRec
+      ? 'Start with ' + (MODEL_CATALOG[firstRec] ? MODEL_CATALOG[firstRec].label : firstRec)
+      : 'Open Providers';
+
+    var html = '<div class="up-welcome-card">';
+    html += '<div class="up-welcome-card-icon">' + icon('sparkles') + '</div>';
+    html += '<div class="up-welcome-card-body">';
+    html += '<h3>Welcome — get started in 60 seconds</h3>';
+    html += '<p>Configure your first AI provider to unlock model selection and start using the platform. We\'ve picked the easiest free providers for you below.</p>';
+    html += '<ol class="up-welcome-steps">';
+    html += '<li><strong>Pick a provider.</strong> Gemini and Groq give you free keys without a credit card.</li>';
+    html += '<li><strong>Paste your API key.</strong> Each provider\'s editor links to its key page and explains where to find it.</li>';
+    html += '<li><strong>Verify the key.</strong> We make a 1-token test request to confirm it works.</li>';
+    html += '<li><strong>Pick your models.</strong> Toggle the models you want to expose to every app on the platform.</li>';
+    html += '</ol>';
+    if (firstRec) {
+      html += '<button class="up-btn up-btn-primary" data-action="open-provider" data-provider="' + esc(firstRec) + '">' + icon('arrow-right') + ' ' + esc(ctaLabel) + '</button>';
+    } else {
+      html += '<button class="up-btn up-btn-primary" data-action="navigate" data-view="providers">' + icon('arrow-right') + ' ' + esc(ctaLabel) + '</button>';
+    }
+    html += '</div>';
+    html += '</div>';
+    return html;
+  }
+
+  // Recommended Providers rail. Renders a horizontal card grid of any
+  // RECOMMENDED_ORDER provider the user has not yet configured (no key
+  // entered yet — we keep them visible until the user has actually put
+  // a key in, even if not verified). Stays visible after some providers
+  // are configured, as long as ≥1 recommended provider remains untouched.
+  function renderRecommendedProviders() {
+    var unconfigured = [];
+    for (var i = 0; i < RECOMMENDED_ORDER.length; i++) {
+      var pid = RECOMMENDED_ORDER[i];
+      var prov = S.providerMap[pid];
+      if (!prov) continue;
+      // "Unconfigured" = no API key entered yet. Once they paste a key
+      // (verified or not) the rail card disappears — they can finish in
+      // the editor or via the Providers view.
+      if (prov.api_key && prov.api_key.length > 0) continue;
+      var cat = MODEL_CATALOG[pid];
+      if (!cat) continue;
+      unconfigured.push({ id: pid, prov: prov, cat: cat });
+    }
+    if (unconfigured.length === 0) return '';
+
+    var isFirstTime = S.configuredCount === 0;
+    var titleLabel = isFirstTime ? 'Recommended free providers' : 'Add another provider';
+    var subtitle = isFirstTime
+      ? 'Free API keys — no credit card required. Pick one to get started.'
+      : 'Free providers you haven\'t configured yet. One-click setup with built-in guidance.';
+
+    var html = '<div class="up-section up-recommended">';
+    html += '<div class="up-section-header">';
+    html += '<h3>' + icon('sparkles') + ' ' + esc(titleLabel) + '</h3>';
+    html += '<span class="up-section-subtitle">' + esc(subtitle) + '</span>';
+    html += '</div>';
+
+    html += '<div class="up-rec-grid">';
+    for (var j = 0; j < unconfigured.length; j++) {
+      var u = unconfigured[j];
+      var freeNote = (u.cat.guide && u.cat.guide.free_tier) ? u.cat.guide.free_tier : '';
+
+      html += '<div class="up-rec-card" data-action="open-provider" data-provider="' + esc(u.id) + '">';
+      html += '<div class="up-rec-card-top">';
+      html += '<span class="up-rec-card-icon" style="background:' + u.cat.color + '">' + icon(u.cat.icon) + '</span>';
+      if (u.cat.free_tier) {
+        html += '<span class="up-rec-free-pill">' + icon('check') + ' Free tier</span>';
+      }
+      html += '</div>';
+      html += '<div class="up-rec-card-name">' + esc(u.cat.label) + '</div>';
+      html += '<div class="up-rec-card-desc">' + esc(u.cat.desc) + '</div>';
+      if (freeNote) {
+        html += '<div class="up-rec-card-note">' + esc(truncate(freeNote, 110)) + '</div>';
+      }
+      html += '<div class="up-rec-card-cta">' + icon('arrow-right') + ' Configure now</div>';
+      html += '</div>';
+    }
+    html += '</div>';
+    html += '</div>';
     return html;
   }
 
@@ -1022,6 +1430,11 @@ window.UP_BUILD_TIME = "2026-05-16T14:13:26.692Z";
       html += '<div class="up-prov-name-row">';
       html += '<span class="up-prov-name">' + esc(p.label) + '</span>';
       html += '<span class="up-prov-cat up-prov-cat--' + esc(pCategory) + '">' + (pCategory === 'major' ? 'Model Provider' : 'Infrastructure') + '</span>';
+      // Surface free-tier status so users browsing the list can spot
+      // no-credit-card-required providers without opening each editor.
+      if (catInfo && catInfo.free_tier) {
+        html += '<span class="up-rec-free-pill" title="Free API key available without a credit card">' + icon('check') + ' Free tier</span>';
+      }
       html += '</div>';
       html += '<div class="up-prov-desc">' + esc(pDesc) + '</div>';
 
@@ -1271,18 +1684,16 @@ window.UP_BUILD_TIME = "2026-05-16T14:13:26.692Z";
       toast(prov.label + (prov.enabled ? ' enabled' : ' disabled'), 'success');
     });
 
-    // Open provider modal (Part 2A will handle this — for now, navigate to providers)
+    // Open the full-page provider editor at #provider/<id>. The route is
+    // recognised by readHash + navigate (06-navigation.js) and dispatched
+    // to R.providerEditor (registered by Part 2A). If Part 2A hasn't loaded
+    // yet the navigation still happens — renderCurrentView shows a
+    // loading shim until Part 2A's re-render kicks in.
     $(document).off('click.up-op', '[data-action="open-provider"]').on('click.up-op', '[data-action="open-provider"]', function(e) {
       e.preventDefault();
       var providerId = $(this).data('provider');
-      // Part 2A will override this to open a modal
-      var R = window._upRenderers;
-      if (R.openProviderModal) {
-        R.openProviderModal(providerId);
-      } else {
-        console.log('[UP] Provider clicked: ' + providerId + ' (modal not yet available — Part 2A)');
-        navigate('providers');
-      }
+      if (!providerId) return;
+      navigate(PROVIDER_EDITOR_HASH_PREFIX + providerId);
     });
 
     // Add custom provider (Part 2A will handle the modal)
@@ -1364,10 +1775,16 @@ window.UP_BUILD_TIME = "2026-05-16T14:13:26.692Z";
       setTimeout(function() { $t.remove(); }, 300);
     });
 
-    // Hash change
+    // Hash change. readHash() returns either a top-level view id or the
+    // parameterised "provider/<id>" route. Reconstruct what the hash
+    // *should* be from the current internal state so we don't re-navigate
+    // when the URL already matches (which would cause an extra render).
     $(window).off('hashchange.up').on('hashchange.up', function() {
       var h = readHash();
-      if (h !== S.currentView) navigate(h);
+      var currentRouteHash = (S.currentView === 'provider-editor' && S.editingProviderId)
+        ? PROVIDER_EDITOR_HASH_PREFIX + S.editingProviderId
+        : S.currentView;
+      if (h !== currentRouteHash) navigate(h);
     });
   }
 
@@ -1486,6 +1903,9 @@ window.UP_BUILD_TIME = "2026-05-16T14:13:26.692Z";
     APP_VIEWS: APP_VIEWS,
     MODEL_CATALOG: MODEL_CATALOG,
     PROVIDER_ORDER: PROVIDER_ORDER,
+    RECOMMENDED_ORDER: RECOMMENDED_ORDER,
+    REMOVED_PROVIDERS: REMOVED_PROVIDERS,
+    PROVIDER_EDITOR_HASH_PREFIX: PROVIDER_EDITOR_HASH_PREFIX,
     ACTIVITY_TYPES: ACTIVITY_TYPES,
     CATEGORY_LABELS: CATEGORY_LABELS
   };
@@ -1564,9 +1984,13 @@ window.UP_BUILD_TIME = "2026-05-16T14:13:26.692Z";
     buildLLMConfig = window._upBuildLLMConfig;
     Constants = window._upConstants;
 
-    // Register renderers
+    // Register renderers — these are looked up by Part 1's
+    // renderCurrentView (06-navigation.js) and by event handlers in
+    // 12-events.js. The full-page provider editor lives in Part 2A
+    // because it shares verify/save logic with the rest of this part.
     var R = window._upRenderers = window._upRenderers || {};
-    R.openProviderModal = openProviderModal;
+    R.providerEditor = renderProviderEditor;
+    R.setupProviderEditorEvents = setupProviderEditorEvents;
     R.openAddCustomProviderModal = openAddCustomProviderModal;
 
     // Wrap handler-setup so a failure here does not cascade into Part 2B.
@@ -1631,7 +2055,6 @@ window.UP_BUILD_TIME = "2026-05-16T14:13:26.692Z";
   function closeModal() {
     $('.up-modal-backdrop').remove();
     currentModal = null;
-    _verifyingProvider = null;
   }
 
   function openConfirmDialog(opts) {
@@ -1692,108 +2115,18 @@ window.UP_BUILD_TIME = "2026-05-16T14:13:26.692Z";
   // ============================================================
 
 /* ===== src/20-part2a/04-provider-modal.js ===== */
-  // SECTION 4: PROVIDER CONFIGURATION MODAL (3-step flow)
+  // SECTION 4: PROVIDER FORM HELPERS
   // ============================================================
-
-  var _verifyingProvider = null;
-
-  function openProviderModal(providerId) {
-    var prov = S.providerMap[providerId];
-    if (!prov) { toast('Provider not found', 'error'); return; }
-
-    // Build catInfo — from catalog or from custom provider data
-    var catInfo = Constants.MODEL_CATALOG[providerId];
-    if (!catInfo) {
-      // Custom provider — build a synthetic catInfo from provider data
-      catInfo = {
-        label: prov.label || providerId,
-        icon: 'sparkles',
-        category: prov.category || 'custom',
-        desc: prov.custom ? 'Custom provider' : '',
-        color: prov.color || '#6b7280',
-        test_endpoint: prov.test_endpoint || '',
-        test_method: prov.test_method || 'openai',
-        models: (prov.models || []).map(function(m) { return { id: m.id, label: m.label, category: m.category || 'balanced', default_temp: m.temperature || 0.7, max_tokens: m.max_tokens || 8192 }; })
-      };
-    }
-
-    var isVerified = prov.key_verified && prov.api_key;
-    _verifyingProvider = providerId;
-
-    var content = renderProviderModalContent(prov, catInfo, isVerified);
-
-    var footerLeft = '';
-    if (prov.active && prov.key_verified) {
-      footerLeft = '<button class="up-btn up-btn-danger up-btn-sm" data-action="remove-provider" data-provider="' + esc(providerId) + '">' + icon('trash') + ' Remove Provider</button>';
-    }
-
-    openModal(catInfo.label, content, {
-      size: 'lg',
-      headerIcon: catInfo.icon,
-      headerIconColor: catInfo.color,
-      subtitle: catInfo.desc,
-      saveLabel: isVerified ? 'Save Provider' : false,
-      footerLeft: footerLeft,
-      onSave: function() { saveProviderFromModal(providerId); }
-    });
-  }
-
-  function renderProviderModalContent(prov, catInfo, isVerified) {
-    var html = '';
-
-    // ── Step 1: API Key ──
-    html += '<div class="up-config-step">';
-    html += '<div class="up-step-header">';
-    html += '<span class="up-step-num ' + (isVerified ? 'up-step-num--done' : 'up-step-num--active') + '">' + (isVerified ? icon('check') : '1') + '</span>';
-    html += '<span class="up-step-title">API Key</span>';
-    if (isVerified) html += '<span class="up-step-badge up-step-badge--success">' + icon('shield-check') + ' Verified</span>';
-    html += '</div>';
-    html += '<div class="up-step-body">';
-    html += '<div class="up-key-row">';
-    html += '<input type="text" class="up-input up-key-input" id="upProviderKey" placeholder="Enter your ' + esc(catInfo.label) + ' API key..." value="' + esc(prov.api_key || '') + '" autocomplete="off" spellcheck="false">';
-    html += '<button class="up-btn ' + (isVerified ? 'up-btn-success' : 'up-btn-primary') + '" id="upVerifyBtn" data-action="verify-key" data-provider="' + esc(prov.id) + '">';
-    html += isVerified ? icon('check') + ' Verified' : icon('shield-check') + ' Verify Key';
-    html += '</button>';
-    html += '</div>';
-    html += '<div id="upVerifyStatus"></div>';
-    if (prov.key_verified_at) {
-      html += '<div class="up-key-meta">' + icon('clock') + ' Last verified: ' + formatRelativeTime(prov.key_verified_at) + '</div>';
-    }
-    html += '</div></div>';
-
-    // ── Step 2: Select Models ──
-    html += '<div class="up-config-step' + (isVerified ? '' : ' up-config-step--locked') + '" id="upModelStep">';
-    html += '<div class="up-step-header">';
-    html += '<span class="up-step-num ' + (isVerified ? 'up-step-num--active' : '') + '">2</span>';
-    html += '<span class="up-step-title">Select Models</span>';
-    if (!isVerified) html += '<span class="up-step-lock">' + icon('lock') + ' Verify key first</span>';
-    html += '</div>';
-    if (isVerified) {
-      html += '<div class="up-step-body">';
-      html += renderModelSelectionList(prov, catInfo);
-      html += '<button class="up-btn up-btn-xs up-btn-outline up-refresh-btn" data-action="live-refresh-modal" data-provider="' + esc(prov.id) + '" style="margin-top:var(--up-space-3)">';
-      html += icon('refresh') + ' Refresh from API';
-      html += '</button>';
-      html += '</div>';
-    }
-    html += '</div>';
-
-    // ── Step 3: Default Parameters ──
-    html += '<div class="up-config-step' + (isVerified ? '' : ' up-config-step--locked') + '" id="upParamStep">';
-    html += '<div class="up-step-header">';
-    html += '<span class="up-step-num ' + (isVerified ? 'up-step-num--active' : '') + '">3</span>';
-    html += '<span class="up-step-title">Default Parameters</span>';
-    if (!isVerified) html += '<span class="up-step-lock">' + icon('lock') + ' Verify key first</span>';
-    html += '</div>';
-    if (isVerified) {
-      html += '<div class="up-step-body">';
-      html += renderParameterControls(prov);
-      html += '</div>';
-    }
-    html += '</div>';
-
-    return html;
-  }
+  //
+  // Shared form-rendering helpers used by the full-page provider editor
+  // (see 04b-provider-editor-view.js). Previously this file also hosted
+  // openProviderModal() — a 3-step modal-based configurator — but that
+  // flow was replaced by the full-page editor view in v0.2.0. The form
+  // field IDs and class names below are deliberately preserved (e.g.
+  // #upProviderKey, #upParamTemp, .up-mm-toggle, .up-mm-star) so the
+  // shared event handlers in 08-events.js continue to work without
+  // surface-specific branching.
+  // ============================================================
 
   function renderModelSelectionList(prov, catInfo) {
     var models = prov.models || [];
@@ -1883,6 +2216,270 @@ window.UP_BUILD_TIME = "2026-05-16T14:13:26.692Z";
 
   // ============================================================
 
+/* ===== src/20-part2a/04b-provider-editor-view.js ===== */
+  // SECTION 4B: PROVIDER EDITOR VIEW (full-page)
+  // ============================================================
+  //
+  // Replaces the old modal-based provider configurator with a dedicated
+  // hash-routed view at #provider/<id>. Rendered by Part 1's
+  // renderCurrentView() when S.currentView === 'provider-editor'.
+  //
+  // Layout (two columns on desktop, stacked on mobile):
+  //   ┌─────────────────────────────┬──────────────────────┐
+  //   │  Header: back / icon / name / status                │
+  //   ├─────────────────────────────┼──────────────────────┤
+  //   │  Left: Key → Models → Params│  Right: Guide panel  │
+  //   │  Sticky save bar at bottom  │  (signup, steps, etc)│
+  //   └─────────────────────────────┴──────────────────────┘
+  //
+  // The form field IDs (#upProviderKey, #upParamTemp, etc.) and class
+  // names (.up-mm-toggle, .up-mm-star) are deliberately the SAME ones
+  // the old modal used so the existing event handlers in 08-events.js
+  // continue to work unchanged.
+  // ============================================================
+
+  function renderProviderEditor(providerId) {
+    var prov = S.providerMap[providerId];
+    if (!prov) {
+      return '<div class="up-empty-state">' +
+        '<div class="up-empty-state-icon">' + icon('triangle-exclamation') + '</div>' +
+        '<div class="up-empty-state-title">Provider not found</div>' +
+        '<div class="up-empty-state-text">"' + esc(providerId) + '" is not in the catalog.</div>' +
+        '<button class="up-btn up-btn-primary" data-action="navigate" data-view="providers" style="margin-top:var(--up-space-4)">' + icon('arrow-left') + ' Back to Providers</button>' +
+        '</div>';
+    }
+
+    // Build catInfo — from catalog or synthesised from custom provider data
+    var catInfo = Constants.MODEL_CATALOG[providerId];
+    var isCustom = !catInfo;
+    if (!catInfo) {
+      catInfo = {
+        label: prov.label || providerId,
+        icon: 'sparkles',
+        category: prov.category || 'custom',
+        desc: prov.custom ? 'Custom provider' : '',
+        color: prov.color || '#6b7280',
+        test_endpoint: prov.test_endpoint || '',
+        test_method: prov.test_method || 'openai',
+        free_tier: false,
+        guide: null,
+        models: (prov.models || []).map(function(m) {
+          return { id: m.id, label: m.label, category: m.category || 'balanced', default_temp: m.temperature || 0.7, max_tokens: m.max_tokens || 8192 };
+        })
+      };
+    }
+
+    var isVerified = !!(prov.key_verified && prov.api_key);
+    var activeCount = (prov.models || []).filter(function(m) { return m.active; }).length;
+
+    var html = '<div class="up-view up-view-editor">';
+
+    // ── Header bar ──
+    html += '<div class="up-editor-topbar">';
+    html += '<button class="up-btn up-btn-outline up-btn-sm" data-action="editor-back">' + icon('arrow-left') + ' Back</button>';
+    html += '<div class="up-editor-titlewrap">';
+    html += '<span class="up-editor-titleicon" style="background:' + catInfo.color + '">' + icon(catInfo.icon) + '</span>';
+    html += '<div class="up-editor-titletext">';
+    html += '<h2>' + esc(catInfo.label) + '</h2>';
+    html += '<span class="up-editor-titlesub">' + esc(catInfo.desc) + '</span>';
+    html += '</div>';
+    html += '</div>';
+    html += '<div class="up-editor-status">';
+    if (isVerified) {
+      html += '<span class="up-step-badge up-step-badge--success">' + icon('shield-check') + ' Verified</span>';
+      if (prov.enabled) {
+        html += '<span class="up-status-on">' + icon('circle-dot') + ' ' + activeCount + ' active model' + (activeCount !== 1 ? 's' : '') + '</span>';
+      } else {
+        html += '<span class="up-status-off">' + icon('pause') + ' Disabled</span>';
+      }
+    } else if (prov.api_key) {
+      html += '<span class="up-step-badge up-step-badge--warning">' + icon('triangle-exclamation') + ' Not verified</span>';
+    } else if (catInfo.free_tier) {
+      html += '<span class="up-rec-free-pill">' + icon('check') + ' Free tier</span>';
+    }
+    html += '</div>';
+    html += '</div>';
+
+    // ── Two-column body ──
+    html += '<div class="up-editor-body">';
+
+    // LEFT: Configuration form
+    html += '<div class="up-editor-form-col">';
+
+    // Step 1: API Key + Verify
+    html += '<div class="up-editor-section">';
+    html += '<div class="up-editor-section-header">';
+    html += '<span class="up-step-num ' + (isVerified ? 'up-step-num--done' : 'up-step-num--active') + '">' + (isVerified ? icon('check') : '1') + '</span>';
+    html += '<h3>API Key</h3>';
+    if (catInfo.guide && catInfo.guide.key_url) {
+      html += '<a href="' + esc(catInfo.guide.key_url) + '" target="_blank" rel="noopener" class="up-editor-keylink">' + icon('link') + ' Get key from ' + esc(catInfo.label) + '</a>';
+    }
+    html += '</div>';
+    html += '<div class="up-editor-section-body">';
+    html += '<div class="up-key-row">';
+    html += '<input type="text" class="up-input up-key-input" id="upProviderKey" placeholder="Paste your ' + esc(catInfo.label) + ' API key here" value="' + esc(prov.api_key || '') + '" autocomplete="off" spellcheck="false">';
+    html += '<button class="up-btn ' + (isVerified ? 'up-btn-success' : 'up-btn-primary') + '" id="upVerifyBtn" data-action="verify-key" data-provider="' + esc(prov.id) + '">';
+    html += isVerified ? icon('check') + ' Verified' : icon('shield-check') + ' Verify Key';
+    html += '</button>';
+    html += '</div>';
+    html += '<div id="upVerifyStatus"></div>';
+    if (catInfo.guide && catInfo.guide.key_format) {
+      html += '<div class="up-key-meta">' + icon('info') + ' ' + esc(catInfo.guide.key_format) + '</div>';
+    }
+    if (prov.key_verified_at) {
+      html += '<div class="up-key-meta">' + icon('clock') + ' Last verified: ' + formatRelativeTime(prov.key_verified_at) + '</div>';
+    }
+    html += '</div>';
+    html += '</div>';
+
+    // Step 2: Model selection (only when verified)
+    html += '<div class="up-editor-section' + (isVerified ? '' : ' up-editor-section--locked') + '">';
+    html += '<div class="up-editor-section-header">';
+    html += '<span class="up-step-num ' + (isVerified ? 'up-step-num--active' : '') + '">2</span>';
+    html += '<h3>Select Models</h3>';
+    if (!isVerified) {
+      html += '<span class="up-step-lock">' + icon('lock') + ' Verify key first</span>';
+    } else {
+      html += '<button class="up-btn up-btn-xs up-btn-outline" data-action="live-refresh" data-provider="' + esc(prov.id) + '">' + icon('refresh') + ' Refresh from API</button>';
+    }
+    html += '</div>';
+    if (isVerified) {
+      html += '<div class="up-editor-section-body">';
+      html += renderModelSelectionList(prov, catInfo);
+      if (isCustom) {
+        html += '<div class="up-custom-model-add" style="margin-top:var(--up-space-3)">';
+        html += '<span class="up-form-hint">' + icon('info') + ' Custom providers: use "Refresh from API" to discover models, or add them manually via the Models view after saving.</span>';
+        html += '</div>';
+      }
+      html += '</div>';
+    }
+    html += '</div>';
+
+    // Step 3: Default parameters
+    html += '<div class="up-editor-section' + (isVerified ? '' : ' up-editor-section--locked') + '">';
+    html += '<div class="up-editor-section-header">';
+    html += '<span class="up-step-num ' + (isVerified ? 'up-step-num--active' : '') + '">3</span>';
+    html += '<h3>Default Parameters</h3>';
+    if (!isVerified) html += '<span class="up-step-lock">' + icon('lock') + ' Verify key first</span>';
+    html += '</div>';
+    if (isVerified) {
+      html += '<div class="up-editor-section-body">';
+      html += renderParameterControls(prov);
+      html += '<div class="up-form-hint" style="margin-top:var(--up-space-3)">' + icon('info') + ' These defaults apply to every active model. Override per-model in the Models view.</div>';
+      html += '</div>';
+    }
+    html += '</div>';
+
+    // Sticky action bar at the bottom of the left column
+    html += '<div class="up-editor-actions">';
+    if (isVerified && prov.api_key) {
+      html += '<button class="up-btn up-btn-danger up-btn-sm" data-action="remove-provider" data-provider="' + esc(prov.id) + '">' + icon('trash') + ' Remove Provider</button>';
+    } else {
+      html += '<span></span>';
+    }
+    html += '<div class="up-editor-actions-right">';
+    html += '<button class="up-btn up-btn-outline" data-action="editor-back">Cancel</button>';
+    html += '<button class="up-btn up-btn-primary" data-action="editor-save" data-provider="' + esc(prov.id) + '"' + (isVerified ? '' : ' disabled title="Verify the API key first"') + '>' + icon('check') + ' Save Provider</button>';
+    html += '</div>';
+    html += '</div>';
+
+    html += '</div>'; // form-col
+
+    // RIGHT: Guide panel
+    html += '<div class="up-editor-guide-col">';
+    html += renderProviderGuide(prov, catInfo);
+    html += '</div>';
+
+    html += '</div>'; // body
+    html += '</div>'; // view
+    return html;
+  }
+
+  function renderProviderGuide(prov, catInfo) {
+    var guide = catInfo.guide;
+
+    if (!guide) {
+      // Custom provider — no built-in guide. Show a tiny info card
+      // pointing them at the test endpoint.
+      var html0 = '<div class="up-guide-card">';
+      html0 += '<h4>' + icon('info') + ' Custom provider</h4>';
+      html0 += '<p>This is a custom provider you added. We don\'t have a built-in setup guide, but you can verify connectivity using the API key from your provider\'s dashboard.</p>';
+      if (prov.test_endpoint) {
+        html0 += '<p class="up-guide-endpoint"><strong>Test endpoint:</strong><br><code>' + esc(prov.test_endpoint) + '</code></p>';
+      }
+      html0 += '</div>';
+      return html0;
+    }
+
+    var html = '';
+
+    // Quick-actions card (signup + key URL + free tier note)
+    html += '<div class="up-guide-card up-guide-card--actions">';
+    html += '<h4>' + icon('lightbulb') + ' Quick start</h4>';
+    if (guide.signup_url) {
+      html += '<a class="up-btn up-btn-outline up-btn-sm" href="' + esc(guide.signup_url) + '" target="_blank" rel="noopener">' + icon('user') + ' Sign up at ' + esc(catInfo.label) + '</a>';
+    }
+    if (guide.key_url) {
+      html += '<a class="up-btn up-btn-outline up-btn-sm" href="' + esc(guide.key_url) + '" target="_blank" rel="noopener">' + icon('key') + ' Open API keys page</a>';
+    }
+    if (guide.free_tier) {
+      html += '<div class="up-guide-freetier">';
+      html += '<strong>' + icon(catInfo.free_tier ? 'check-circle' : 'info') + ' ' + (catInfo.free_tier ? 'Free tier' : 'Pricing') + '</strong>';
+      html += '<p>' + esc(guide.free_tier) + '</p>';
+      html += '</div>';
+    }
+    html += '</div>';
+
+    // Steps
+    if (guide.steps && guide.steps.length) {
+      html += '<div class="up-guide-card">';
+      html += '<h4>' + icon('layer-group') + ' Setup steps</h4>';
+      html += '<ol class="up-guide-steps">';
+      for (var i = 0; i < guide.steps.length; i++) {
+        var s = guide.steps[i];
+        html += '<li><strong>' + esc(s.title) + '</strong><span>' + esc(s.body) + '</span></li>';
+      }
+      html += '</ol>';
+      html += '</div>';
+    }
+
+    // Troubleshooting
+    if (guide.troubleshooting && guide.troubleshooting.length) {
+      html += '<div class="up-guide-card">';
+      html += '<h4>' + icon('triangle-exclamation') + ' Troubleshooting</h4>';
+      html += '<dl class="up-guide-trouble">';
+      for (var j = 0; j < guide.troubleshooting.length; j++) {
+        var t = guide.troubleshooting[j];
+        html += '<dt>' + esc(t.issue) + '</dt>';
+        html += '<dd>' + esc(t.fix) + '</dd>';
+      }
+      html += '</dl>';
+      html += '</div>';
+    }
+
+    return html;
+  }
+
+  function setupProviderEditorEvents() {
+    // Back button — returns to whichever view brought the user to the
+    // editor. Falls back to Providers list if previousView is unset.
+    $(document).off('click.up2a-eb', '[data-action="editor-back"]').on('click.up2a-eb', '[data-action="editor-back"]', function(e) {
+      e.preventDefault();
+      var back = S.previousView || 'providers';
+      if (back === 'provider-editor') back = 'providers';
+      navigate(back);
+    });
+
+    // Save button — collects form values via saveProviderFromEditor.
+    $(document).off('click.up2a-es', '[data-action="editor-save"]').on('click.up2a-es', '[data-action="editor-save"]', function(e) {
+      e.preventDefault();
+      var providerId = $(this).data('provider') || S.editingProviderId;
+      saveProviderFromEditor(providerId);
+    });
+  }
+
+  // ============================================================
+
 /* ===== src/20-part2a/05-key-verify.js ===== */
   // SECTION 5: API KEY VERIFICATION
   // ============================================================
@@ -1912,11 +2509,6 @@ window.UP_BUILD_TIME = "2026-05-16T14:13:26.692Z";
           contents: [{ role: 'user', parts: [{ text: 'Hello' }] }],
           generationConfig: { maxOutputTokens: 10, temperature: 0.1 }
         });
-        break;
-
-      case 'claude':
-        headers = { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' };
-        body = JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 10, messages: [{ role: 'user', content: 'Hello' }] });
         break;
 
       case 'cohere':
@@ -2106,54 +2698,13 @@ window.UP_BUILD_TIME = "2026-05-16T14:13:26.692Z";
     buildMaps();
     syncToTextarea();
 
-    // Update modal UI — unlock steps 2 & 3
-    var $btn = $('#upVerifyBtn');
-    $btn.removeClass('up-btn-loading').addClass('up-btn-success').prop('disabled', false)
-      .html(icon('check') + ' Verified');
-    $('#upVerifyStatus').html(
-      '<div class="up-alert up-alert--success">' + icon('check-circle') + ' API key is valid. ' + (prov.models || []).length + ' models available in catalog.</div>'
-    );
-
-    // Unlock model step and param step
-    var $modelStep = $('#upModelStep');
-    $modelStep.removeClass('up-config-step--locked');
-    $modelStep.find('.up-step-num').addClass('up-step-num--active');
-    $modelStep.find('.up-step-lock').remove();
-    // Render model list into step body
-    var catRef = Constants.MODEL_CATALOG[providerId];
-    // For custom providers, build a synthetic catRef
-    if (!catRef && prov.custom) {
-      catRef = { label: prov.label, icon: 'sparkles', color: prov.color || '#6b7280', models: (prov.models || []).map(function(m) { return { id: m.id, label: m.label, category: m.category || 'balanced', default_temp: m.temperature || 0.7, max_tokens: m.max_tokens || 8192 }; }) };
-    }
-    if (catRef) {
-      var stepBody = '<div class="up-step-body">' + renderModelSelectionList(prov, catRef);
-      if (prov.custom) {
-        stepBody += '<div class="up-custom-model-add" style="margin-top:var(--up-space-3)">';
-        stepBody += '<span class="up-form-hint">' + icon('info') + ' Custom providers: use Live Refresh to discover models, or add them manually via the Models view after saving.</span>';
-        stepBody += '</div>';
-      }
-      stepBody += '<button class="up-btn up-btn-xs up-btn-outline up-refresh-btn" data-action="live-refresh-modal" data-provider="' + esc(prov.id) + '" style="margin-top:var(--up-space-3)">' + icon('refresh') + ' Refresh from API</button>';
-      stepBody += '</div>';
-      $modelStep.find('.up-step-body').remove();
-      $modelStep.append(stepBody);
-    }
-
-    var $paramStep = $('#upParamStep');
-    $paramStep.removeClass('up-config-step--locked');
-    $paramStep.find('.up-step-num').addClass('up-step-num--active');
-    $paramStep.find('.up-step-lock').remove();
-    if (!$paramStep.find('.up-step-body').length) {
-      $paramStep.append('<div class="up-step-body">' + renderParameterControls(prov) + '</div>');
-    }
-
-    // Show save button in footer
-    $('.up-modal-footer-right').find('[data-action="modal-save"]').remove();
-    $('.up-modal-footer-right').append('<button class="up-btn up-btn-primary" data-action="modal-save">' + icon('check') + ' Save Provider</button>');
-
-    // Show remove button
-    if (!$('.up-modal-footer-left').length) {
-      $('.up-modal-footer').prepend('<div class="up-modal-footer-left"><button class="up-btn up-btn-danger up-btn-sm" data-action="remove-provider" data-provider="' + esc(providerId) + '">' + icon('trash') + ' Remove Provider</button></div>');
-    }
+    // Re-render the current view. The full-page editor (provider-editor)
+    // will redraw with the model selection + parameter controls now
+    // unlocked. The dashboard / providers list will redraw with the
+    // newly verified provider flipped into the verified state. The toast
+    // gives the user immediate feedback; the redraw follows.
+    toast(prov.label + ' verified — pick the models you want to expose.', 'success');
+    render();
   }
 
   function onVerifyFailure(providerId, errorMsg) {
@@ -2178,9 +2729,9 @@ window.UP_BUILD_TIME = "2026-05-16T14:13:26.692Z";
   // SECTION 6: PROVIDER SAVE & REMOVE
   // ============================================================
 
-  function saveProviderFromModal(providerId) {
-    var prov = S.providerMap[providerId || _verifyingProvider];
-    if (!prov) { closeModal(); return; }
+  function saveProviderFromEditor(providerId) {
+    var prov = S.providerMap[providerId];
+    if (!prov) { navigate('providers'); return; }
 
     // Collect model toggles
     $('.up-mm-toggle').each(function() {
@@ -2252,8 +2803,12 @@ window.UP_BUILD_TIME = "2026-05-16T14:13:26.692Z";
     snapshot('Save ' + prov.label);
     buildMaps();
     syncToTextarea();
-    closeModal();
-    render();
+
+    // Navigate back to the Providers list after saving so the user can
+    // see the updated card in context. If they came from the dashboard
+    // (e.g., via a Recommended rail card) send them back there instead.
+    var returnTo = (S.previousView === 'dashboard') ? 'dashboard' : 'providers';
+    navigate(returnTo);
     toast(prov.label + ' configuration saved', 'success');
   }
 
@@ -2298,8 +2853,15 @@ window.UP_BUILD_TIME = "2026-05-16T14:13:26.692Z";
         snapshot('Remove ' + prov.label);
         buildMaps();
         syncToTextarea();
-        closeModal();
-        render();
+
+        // If the user was on the provider's editor, leave it — the
+        // provider no longer has a key. Otherwise stay on whatever
+        // view called Remove.
+        if (S.currentView === 'provider-editor' && S.editingProviderId === providerId) {
+          navigate('providers');
+        } else {
+          render();
+        }
         toast(prov.label + ' removed', 'success');
       }
     });
@@ -2521,14 +3083,12 @@ window.UP_BUILD_TIME = "2026-05-16T14:13:26.692Z";
       if ($(e.target).hasClass('up-modal-backdrop')) closeModal();
     });
 
-    // Modal save
+    // Modal save — dispatches to whichever modal opened the dialog.
+    // All current modal callers (change-default, add-custom-provider)
+    // pass an onSave callback when calling openModal().
     $(document).off('click.up2a-ms', '[data-action="modal-save"]').on('click.up2a-ms', '[data-action="modal-save"]', function(e) {
       e.preventDefault();
-      if (currentModal && currentModal.onSave) {
-        currentModal.onSave();
-      } else if (_verifyingProvider) {
-        saveProviderFromModal(_verifyingProvider);
-      }
+      if (currentModal && currentModal.onSave) currentModal.onSave();
     });
 
     // Verify key
@@ -2651,8 +3211,8 @@ window.UP_BUILD_TIME = "2026-05-16T14:13:26.692Z";
     closeModal: closeModal,
     openConfirmDialog: openConfirmDialog,
     closeConfirmDialog: closeConfirmDialog,
-    openProviderModal: openProviderModal,
-    saveProviderFromModal: saveProviderFromModal,
+    renderProviderEditor: renderProviderEditor,
+    saveProviderFromEditor: saveProviderFromEditor,
     removeProvider: removeProvider,
     openChangeDefaultModal: openChangeDefaultModal,
     openAddCustomProviderModal: openAddCustomProviderModal,
@@ -2785,7 +3345,7 @@ window.UP_BUILD_TIME = "2026-05-16T14:13:26.692Z";
     toast('Refreshing models for ' + prov.label + '...', 'info', 2000);
 
     // Disable refresh buttons for this provider
-    var $refreshBtns = $('[data-action="live-refresh"][data-provider="' + providerId + '"], [data-action="live-refresh-modal"][data-provider="' + providerId + '"]');
+    var $refreshBtns = $('[data-action="live-refresh"][data-provider="' + providerId + '"]');
     $refreshBtns.prop('disabled', true).addClass('up-btn-loading').html('<span class="up-spinner"></span> Refreshing...');
 
     var headers = { 'Content-Type': 'application/json' };
@@ -3290,19 +3850,13 @@ window.UP_BUILD_TIME = "2026-05-16T14:13:26.692Z";
   // ============================================================
 
   function setupPart2BEvents() {
-    // Live refresh (from Models view)
+    // Live refresh from any surface (Models view, provider editor view).
+    // Both use data-action="live-refresh" — the deprecated "live-refresh-modal"
+    // variant was removed when the configurator modal was replaced by the
+    // full-page editor in v0.2.0.
     $(document).off('click.up2b-lr', '[data-action="live-refresh"]').on('click.up2b-lr', '[data-action="live-refresh"]', function(e) {
       e.preventDefault();
       liveRefreshModels($(this).data('provider'));
-    });
-
-    // Live refresh inside modal
-    $(document).off('click.up2b-lrm', '[data-action="live-refresh-modal"]').on('click.up2b-lrm', '[data-action="live-refresh-modal"]', function(e) {
-      e.preventDefault();
-      var providerId = $(this).data('provider');
-      liveRefreshModels(providerId);
-      // Re-render will close/update modal — inform user
-      toast('Model list will update after refresh completes', 'info', 2000);
     });
 
     // Export

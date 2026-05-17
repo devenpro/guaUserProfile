@@ -1,9 +1,9 @@
   // SECTION 6: PROVIDER SAVE & REMOVE
   // ============================================================
 
-  function saveProviderFromModal(providerId) {
-    var prov = S.providerMap[providerId || _verifyingProvider];
-    if (!prov) { closeModal(); return; }
+  function saveProviderFromEditor(providerId) {
+    var prov = S.providerMap[providerId];
+    if (!prov) { navigate('providers'); return; }
 
     // Collect model toggles
     $('.up-mm-toggle').each(function() {
@@ -75,8 +75,12 @@
     snapshot('Save ' + prov.label);
     buildMaps();
     syncToTextarea();
-    closeModal();
-    render();
+
+    // Navigate back to the Providers list after saving so the user can
+    // see the updated card in context. If they came from the dashboard
+    // (e.g., via a Recommended rail card) send them back there instead.
+    var returnTo = (S.previousView === 'dashboard') ? 'dashboard' : 'providers';
+    navigate(returnTo);
     toast(prov.label + ' configuration saved', 'success');
   }
 
@@ -121,8 +125,15 @@
         snapshot('Remove ' + prov.label);
         buildMaps();
         syncToTextarea();
-        closeModal();
-        render();
+
+        // If the user was on the provider's editor, leave it — the
+        // provider no longer has a key. Otherwise stay on whatever
+        // view called Remove.
+        if (S.currentView === 'provider-editor' && S.editingProviderId === providerId) {
+          navigate('providers');
+        } else {
+          render();
+        }
         toast(prov.label + ' removed', 'success');
       }
     });

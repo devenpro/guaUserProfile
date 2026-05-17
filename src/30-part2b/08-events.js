@@ -2,19 +2,13 @@
   // ============================================================
 
   function setupPart2BEvents() {
-    // Live refresh (from Models view)
+    // Live refresh from any surface (Models view, provider editor view).
+    // Both use data-action="live-refresh" — the deprecated "live-refresh-modal"
+    // variant was removed when the configurator modal was replaced by the
+    // full-page editor in v0.2.0.
     $(document).off('click.up2b-lr', '[data-action="live-refresh"]').on('click.up2b-lr', '[data-action="live-refresh"]', function(e) {
       e.preventDefault();
       liveRefreshModels($(this).data('provider'));
-    });
-
-    // Live refresh inside modal
-    $(document).off('click.up2b-lrm', '[data-action="live-refresh-modal"]').on('click.up2b-lrm', '[data-action="live-refresh-modal"]', function(e) {
-      e.preventDefault();
-      var providerId = $(this).data('provider');
-      liveRefreshModels(providerId);
-      // Re-render will close/update modal — inform user
-      toast('Model list will update after refresh completes', 'info', 2000);
     });
 
     // Export

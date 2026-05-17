@@ -21,6 +21,7 @@
     // UI state
     currentView: 'dashboard',
     previousView: null,
+    editingProviderId: null,    // Set when currentView === 'provider-editor' (hash #provider/<id>)
     providerFilter: 'all',
     modelSearch: '',
     activityExpanded: false,

@@ -2,7 +2,7 @@
 
 Auto-generated from `components/**/*.component.json` by `scripts/build-component-index.mjs`. **Do not edit by hand** — your changes will be overwritten on the next build. Edit the source `.component.json` files and re-run the generator.
 
-Total components: 6.
+Total components: 8.
 
 ---
 
@@ -10,9 +10,10 @@ Total components: 6.
 
 | Component | Summary | Entry | Source |
 |---|---|---|---|
-| **dashboard** | Renders the #dashboard hash route. Shows the active provider grid (one card per enabled provider with model count + key status) and the recent activity feed (collapsed to last 5 by default, expandable to last 50). | `renderDashboard` | [src/10-part1/up-part1.js:780](src/10-part1/up-part1.js) |
+| **dashboard** | Renders the #dashboard hash route. Shows the active provider grid (one card per enabled provider with model count + key status), the welcome guide (only when zero providers configured), the Recommended Providers rail (lists unconfigured RECOMMENDED_ORDER providers — Gemini, Groq, Hugging Face, OpenRouter, Mistral, DeepSeek, Together — visible as long as ≥1 is still unconfigured), and the recent activity feed (collapsed to last 5 by default, expandable to last 50). | `renderDashboard` | [src/10-part1/09-dashboard.js:4](src/10-part1/09-dashboard.js) |
 | **models** | Renders the #models hash route. Per-provider model tables with active toggle, default-star, category pill (fast/balanced/powerful), temperature & token display, fuzzy search across all models, bulk enable/disable per provider, and a live-refresh button for providers that expose /v1/models. Profile-level default-provider selector at the bottom. | `renderModels` | [src/10-part1/up-part1.js:1005](src/10-part1/up-part1.js) |
-| **providers** | Renders the #providers hash route. Full provider list with a 5-filter toolbar (all / configured / unconfigured / major / infra), inline quick-test button per row, enable/disable toggle, and a Configure/Manage button that opens the Part-2A provider modal. | `renderProviders` | [src/10-part1/up-part1.js:878](src/10-part1/up-part1.js) |
+| **provider-editor** | Full-page provider configuration view at hash #provider/<id>. Replaces the v0.1.x modal-based 3-step configurator. Two-column layout: left column hosts the API-key + verify form, model selection list, and default parameter controls; right column hosts the per-provider guide (signup link, key URL, free-tier note, ordered setup steps, troubleshooting list — all sourced from MODEL_CATALOG[id].guide). Reuses the same form-field IDs as the old modal (#upProviderKey, #upParamTemp, .up-mm-toggle, .up-mm-star) so 08-events.js handlers work unchanged. Sticky action bar at the bottom of the left column hosts Cancel/Save/Remove. | `renderProviderEditor` | [src/20-part2a/04b-provider-editor-view.js:23](src/20-part2a/04b-provider-editor-view.js) |
+| **providers** | Renders the #providers hash route. Full provider list with a 5-filter toolbar (all / configured / unconfigured / major / infra), inline quick-test button per row, enable/disable toggle, and a Configure/Manage button that navigates to the full-page provider editor at #provider/<id> (v0.2.0+ — previously opened a modal). | `renderProviders` | [src/10-part1/up-part1.js:878](src/10-part1/up-part1.js) |
 
 ## AI Actions
 
@@ -26,6 +27,7 @@ Total components: 6.
 | Component | Summary | Entry | Source |
 |---|---|---|---|
 | **llm-config** | Builds the clean LLM configuration object that gets written to field_llm_config. This is the contract every other GoUltra AI app depends on — they read it from a .llm-config-data div Drupal renders into the page. Inclusion rule: a provider is included only if enabled && key_verified && api_key, AND it has at least one model with active=true. A model is included only if active=true. Sensitive working fields are stripped. | `buildLLMConfig` | [src/10-part1/up-part1.js:484](src/10-part1/up-part1.js) |
+| **provider-guide** | Per-provider configuration guide block — a static dataset embedded inside MODEL_CATALOG[*].guide. NOT exported via field_llm_config (this is internal app data for the editor view). Read by renderProviderGuide() in the full-page provider editor to render the right-column guide panel (signup link, key URL, free-tier note, ordered setup steps, troubleshooting list). Also surfaced in shorter form by renderRecommendedProviders() on the dashboard rail (free_tier note only, truncated to 110 chars). | `MODEL_CATALOG[id].guide` | [src/10-part1/01-constants.js:25](src/10-part1/01-constants.js) |
 
 ---
 
@@ -33,9 +35,9 @@ Total components: 6.
 
 ### dashboard  `view`
 
-Renders the #dashboard hash route. Shows the active provider grid (one card per enabled provider with model count + key status) and the recent activity feed (collapsed to last 5 by default, expandable to last 50).
+Renders the #dashboard hash route. Shows the active provider grid (one card per enabled provider with model count + key status), the welcome guide (only when zero providers configured), the Recommended Providers rail (lists unconfigured RECOMMENDED_ORDER providers — Gemini, Groq, Hugging Face, OpenRouter, Mistral, DeepSeek, Together — visible as long as ≥1 is still unconfigured), and the recent activity feed (collapsed to last 5 by default, expandable to last 50).
 
-**Entry:** `renderDashboard` at `src/10-part1/up-part1.js:780`
+**Entry:** `renderDashboard` at `src/10-part1/09-dashboard.js:4`
 
 **Schema source:** `components/views/dashboard.component.json`
 
@@ -48,7 +50,7 @@ Renders the #dashboard hash route. Shows the active provider grid (one card per 
 
 **Reads:**
 
-- State: `S.data.providers`, `S.activeProviders`, `S.data.activity`, `S.activityExpanded`, `S.exportableCount`, `S.verifiedCount`, `S.totalActiveModels`, `S.user`
+- State: `S.data.providers`, `S.providerMap`, `S.activeProviders`, `S.data.activity`, `S.activityExpanded`, `S.exportableCount`, `S.verifiedCount`, `S.configuredCount`, `S.totalActiveModels`, `S.user`
 
 **Writes:**
 
@@ -58,10 +60,12 @@ Renders the #dashboard hash route. Shows the active provider grid (one card per 
 
 - **S.data.providers undefined or malformed** — renderCurrentView() error boundary catches the throw and replaces #upContent with .up-crash-card showing the stack trace
 - **Empty activity log** — Activity panel renders an empty-state hint; not a crash
+- **Zero providers configured** — Welcome guide card renders at top with a 'Start with <top-recommended>' CTA; Recommended rail below offers one-click setup for Gemini/Groq/Hugging Face/OpenRouter/Mistral/DeepSeek/Together
+- **All RECOMMENDED_ORDER providers already have keys** — Recommended rail returns empty string and is omitted from the rendered output
 
-**Tags:** `view` · `dashboard` · `activity` · `stats` · `provider-grid`
+**Tags:** `view` · `dashboard` · `activity` · `stats` · `provider-grid` · `recommended` · `welcome` · `onboarding`
 
-**Related:** `providers`, `models`
+**Related:** `providers`, `models`, `provider-editor`
 
 ---
 
@@ -98,9 +102,46 @@ Renders the #models hash route. Per-provider model tables with active toggle, de
 
 ---
 
+### provider-editor  `view`
+
+Full-page provider configuration view at hash #provider/<id>. Replaces the v0.1.x modal-based 3-step configurator. Two-column layout: left column hosts the API-key + verify form, model selection list, and default parameter controls; right column hosts the per-provider guide (signup link, key URL, free-tier note, ordered setup steps, troubleshooting list — all sourced from MODEL_CATALOG[id].guide). Reuses the same form-field IDs as the old modal (#upProviderKey, #upParamTemp, .up-mm-toggle, .up-mm-star) so 08-events.js handlers work unchanged. Sticky action bar at the bottom of the left column hosts Cancel/Save/Remove.
+
+**Entry:** `renderProviderEditor` at `src/20-part2a/04b-provider-editor-view.js:23`
+
+**Schema source:** `components/views/provider-editor.component.json`
+
+**Triggers:**
+
+- navigate('provider/<id>')
+- hashchange to #provider/<id>
+- click on any [data-action="open-provider"] element (dashboard active cards, Recommended rail cards, providers list cards, welcome guide CTA)
+
+**Reads:**
+
+- State: `S.providerMap[id]`, `S.editingProviderId`, `S.previousView`, `Constants.MODEL_CATALOG[id]`, `Constants.CATEGORY_LABELS`
+- DOM: `#upProviderKey value`, `#upParamTemp value`, `#upParamTokens value`, `#upParamTopP value`, `.up-mm-toggle (per-model checkbox state)`, `.up-mm-star.up-star--on (default-model selection)`
+
+**Writes:**
+
+- State: `S.providerMap[id].api_key (via key-verify handler)`, `S.providerMap[id].key_verified, key_verified_at (via verify-key handler)`, `S.providerMap[id].models[*].active, is_default, temperature, max_tokens, top_p (on save)`, `S.providerMap[id].enabled, active (on save / verify)`, `S.data.default_provider, default_model (auto-assigned on first save when none exists)`, `S.previousView, S.currentView, S.editingProviderId (via navigate)`
+- DOM: `#upContent innerHTML (full re-render via renderCurrentView)`, `window.location.hash`
+
+**Failure modes:**
+
+- **Provider id in URL does not exist in S.providerMap** — navigate() falls back to 'dashboard'. If the route is reached directly (e.g. bookmark to a retired provider like #provider/claude), renderProviderEditor renders a 'Provider not found' empty state with a Back-to-Providers button.
+- **Custom provider with no MODEL_CATALOG entry** — Synthesises a catInfo from prov.* fields and renders a fallback 'Custom provider' card in place of the guide column.
+- **Part 2A not yet loaded when renderCurrentView dispatches to R.providerEditor** — 06-navigation.js falls back to a 'Loading editor…' empty state until Part 2A registers the renderer and triggers its own render().
+- **Key verify failed but user clicked Save** — Save button is disabled until key_verified is true (visible in the editor as a disabled button with a 'Verify the API key first' tooltip).
+
+**Tags:** `view` · `provider-editor` · `configuration` · `guide` · `full-page` · `hash-route`
+
+**Related:** `dashboard`, `providers`, `models`, `key-verify`
+
+---
+
 ### providers  `view`
 
-Renders the #providers hash route. Full provider list with a 5-filter toolbar (all / configured / unconfigured / major / infra), inline quick-test button per row, enable/disable toggle, and a Configure/Manage button that opens the Part-2A provider modal.
+Renders the #providers hash route. Full provider list with a 5-filter toolbar (all / configured / unconfigured / major / infra), inline quick-test button per row, enable/disable toggle, and a Configure/Manage button that navigates to the full-page provider editor at #provider/<id> (v0.2.0+ — previously opened a modal).
 
 **Entry:** `renderProviders` at `src/10-part1/up-part1.js:878`
 
@@ -127,7 +168,7 @@ Renders the #providers hash route. Full provider list with a 5-filter toolbar (a
 
 **Tags:** `view` · `providers` · `filter-toolbar` · `quick-test` · `enable-toggle`
 
-**Related:** `dashboard`, `models`, `key-verify`
+**Related:** `dashboard`, `models`, `provider-editor`, `key-verify`
 
 ---
 
@@ -305,6 +346,77 @@ Builds the clean LLM configuration object that gets written to field_llm_config.
 **Tags:** `data-export` · `contract` · `platform-critical` · `field-llm-config`
 
 **Related:** `providers`, `models`, `key-verify`
+
+---
+
+### provider-guide  `data-export`
+
+Per-provider configuration guide block — a static dataset embedded inside MODEL_CATALOG[*].guide. NOT exported via field_llm_config (this is internal app data for the editor view). Read by renderProviderGuide() in the full-page provider editor to render the right-column guide panel (signup link, key URL, free-tier note, ordered setup steps, troubleshooting list). Also surfaced in shorter form by renderRecommendedProviders() on the dashboard rail (free_tier note only, truncated to 110 chars).
+
+**Entry:** `MODEL_CATALOG[id].guide` at `src/10-part1/01-constants.js:25`
+
+**Schema source:** `components/exports/provider-guide.component.json`
+
+**Triggers:**
+
+- renderProviderEditor() reads MODEL_CATALOG[id].guide to populate the right-column guide panel
+- renderRecommendedProviders() reads MODEL_CATALOG[id].guide.free_tier for the dashboard rail's truncated note
+- renderWelcomeGuide() uses MODEL_CATALOG[firstRec] for the 'Start with <provider>' CTA label
+
+**Reads:**
+
+
+**Writes:**
+
+
+**Output contract:**
+
+```json
+{
+  "description": "Each MODEL_CATALOG entry MAY include a `guide` block matching this shape. When `guide` is null/missing (e.g., custom user-added providers), renderProviderGuide falls back to a minimal 'Custom provider' info card.",
+  "schema": {
+    "signup_url": "string — public URL where the user creates an account with the provider",
+    "key_url": "string — deep link to the provider's API-key management page",
+    "key_format": "string — human-readable description of the key's prefix or shape (e.g., 'Starts with \"sk-\" — about 50+ characters')",
+    "free_tier": "string — short description of the provider's free-tier policy; empty string for paid-only providers",
+    "steps": "array of { title: string, body: string } — ordered setup walkthrough",
+    "troubleshooting": "array of { issue: string, fix: string } — common verify-failure scenarios with remediation"
+  },
+  "example": {
+    "signup_url": "https://aistudio.google.com/",
+    "key_url": "https://aistudio.google.com/app/apikey",
+    "key_format": "Starts with \"AIza\" — about 39 characters.",
+    "free_tier": "Free tier with generous daily quota for Gemini 2.5 Flash and Flash Lite. No credit card required to start.",
+    "steps": [
+      {
+        "title": "Sign in with Google",
+        "body": "Open Google AI Studio and sign in with any Google account."
+      },
+      {
+        "title": "Create an API key",
+        "body": "In AI Studio, click 'Get API key' and then 'Create API key'."
+      }
+    ],
+    "troubleshooting": [
+      {
+        "issue": "API_KEY_INVALID",
+        "fix": "You may have pasted the key with whitespace. Re-copy from AI Studio."
+      }
+    ]
+  }
+}
+```
+
+**Failure modes:**
+
+- **MODEL_CATALOG[id].guide missing (custom provider)** — renderProviderGuide returns a minimal 'Custom provider' info card with the test_endpoint instead. Editor still functions; only the guide panel is degraded.
+- **guide.steps or guide.troubleshooting empty/missing** — Corresponding section is omitted from the rendered guide panel — no crash.
+
+> ⚠ **Breaking change risk:** This block is internal app data. It is NOT serialised to field_llm_config and NOT consumed by other apps on the platform. Adding/removing fields here only affects the editor's right-column rendering.
+
+**Tags:** `data-export` · `guide` · `provider-onboarding` · `static-catalog`
+
+**Related:** `provider-editor`, `dashboard`
 
 ---
 

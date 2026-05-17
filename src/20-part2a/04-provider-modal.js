@@ -1,105 +1,15 @@
-  // SECTION 4: PROVIDER CONFIGURATION MODAL (3-step flow)
+  // SECTION 4: PROVIDER FORM HELPERS
   // ============================================================
-
-  var _verifyingProvider = null;
-
-  function openProviderModal(providerId) {
-    var prov = S.providerMap[providerId];
-    if (!prov) { toast('Provider not found', 'error'); return; }
-
-    // Build catInfo — from catalog or from custom provider data
-    var catInfo = Constants.MODEL_CATALOG[providerId];
-    if (!catInfo) {
-      // Custom provider — build a synthetic catInfo from provider data
-      catInfo = {
-        label: prov.label || providerId,
-        icon: 'sparkles',
-        category: prov.category || 'custom',
-        desc: prov.custom ? 'Custom provider' : '',
-        color: prov.color || '#6b7280',
-        test_endpoint: prov.test_endpoint || '',
-        test_method: prov.test_method || 'openai',
-        models: (prov.models || []).map(function(m) { return { id: m.id, label: m.label, category: m.category || 'balanced', default_temp: m.temperature || 0.7, max_tokens: m.max_tokens || 8192 }; })
-      };
-    }
-
-    var isVerified = prov.key_verified && prov.api_key;
-    _verifyingProvider = providerId;
-
-    var content = renderProviderModalContent(prov, catInfo, isVerified);
-
-    var footerLeft = '';
-    if (prov.active && prov.key_verified) {
-      footerLeft = '<button class="up-btn up-btn-danger up-btn-sm" data-action="remove-provider" data-provider="' + esc(providerId) + '">' + icon('trash') + ' Remove Provider</button>';
-    }
-
-    openModal(catInfo.label, content, {
-      size: 'lg',
-      headerIcon: catInfo.icon,
-      headerIconColor: catInfo.color,
-      subtitle: catInfo.desc,
-      saveLabel: isVerified ? 'Save Provider' : false,
-      footerLeft: footerLeft,
-      onSave: function() { saveProviderFromModal(providerId); }
-    });
-  }
-
-  function renderProviderModalContent(prov, catInfo, isVerified) {
-    var html = '';
-
-    // ── Step 1: API Key ──
-    html += '<div class="up-config-step">';
-    html += '<div class="up-step-header">';
-    html += '<span class="up-step-num ' + (isVerified ? 'up-step-num--done' : 'up-step-num--active') + '">' + (isVerified ? icon('check') : '1') + '</span>';
-    html += '<span class="up-step-title">API Key</span>';
-    if (isVerified) html += '<span class="up-step-badge up-step-badge--success">' + icon('shield-check') + ' Verified</span>';
-    html += '</div>';
-    html += '<div class="up-step-body">';
-    html += '<div class="up-key-row">';
-    html += '<input type="text" class="up-input up-key-input" id="upProviderKey" placeholder="Enter your ' + esc(catInfo.label) + ' API key..." value="' + esc(prov.api_key || '') + '" autocomplete="off" spellcheck="false">';
-    html += '<button class="up-btn ' + (isVerified ? 'up-btn-success' : 'up-btn-primary') + '" id="upVerifyBtn" data-action="verify-key" data-provider="' + esc(prov.id) + '">';
-    html += isVerified ? icon('check') + ' Verified' : icon('shield-check') + ' Verify Key';
-    html += '</button>';
-    html += '</div>';
-    html += '<div id="upVerifyStatus"></div>';
-    if (prov.key_verified_at) {
-      html += '<div class="up-key-meta">' + icon('clock') + ' Last verified: ' + formatRelativeTime(prov.key_verified_at) + '</div>';
-    }
-    html += '</div></div>';
-
-    // ── Step 2: Select Models ──
-    html += '<div class="up-config-step' + (isVerified ? '' : ' up-config-step--locked') + '" id="upModelStep">';
-    html += '<div class="up-step-header">';
-    html += '<span class="up-step-num ' + (isVerified ? 'up-step-num--active' : '') + '">2</span>';
-    html += '<span class="up-step-title">Select Models</span>';
-    if (!isVerified) html += '<span class="up-step-lock">' + icon('lock') + ' Verify key first</span>';
-    html += '</div>';
-    if (isVerified) {
-      html += '<div class="up-step-body">';
-      html += renderModelSelectionList(prov, catInfo);
-      html += '<button class="up-btn up-btn-xs up-btn-outline up-refresh-btn" data-action="live-refresh-modal" data-provider="' + esc(prov.id) + '" style="margin-top:var(--up-space-3)">';
-      html += icon('refresh') + ' Refresh from API';
-      html += '</button>';
-      html += '</div>';
-    }
-    html += '</div>';
-
-    // ── Step 3: Default Parameters ──
-    html += '<div class="up-config-step' + (isVerified ? '' : ' up-config-step--locked') + '" id="upParamStep">';
-    html += '<div class="up-step-header">';
-    html += '<span class="up-step-num ' + (isVerified ? 'up-step-num--active' : '') + '">3</span>';
-    html += '<span class="up-step-title">Default Parameters</span>';
-    if (!isVerified) html += '<span class="up-step-lock">' + icon('lock') + ' Verify key first</span>';
-    html += '</div>';
-    if (isVerified) {
-      html += '<div class="up-step-body">';
-      html += renderParameterControls(prov);
-      html += '</div>';
-    }
-    html += '</div>';
-
-    return html;
-  }
+  //
+  // Shared form-rendering helpers used by the full-page provider editor
+  // (see 04b-provider-editor-view.js). Previously this file also hosted
+  // openProviderModal() — a 3-step modal-based configurator — but that
+  // flow was replaced by the full-page editor view in v0.2.0. The form
+  // field IDs and class names below are deliberately preserved (e.g.
+  // #upProviderKey, #upParamTemp, .up-mm-toggle, .up-mm-star) so the
+  // shared event handlers in 08-events.js continue to work without
+  // surface-specific branching.
+  // ============================================================
 
   function renderModelSelectionList(prov, catInfo) {
     var models = prov.models || [];

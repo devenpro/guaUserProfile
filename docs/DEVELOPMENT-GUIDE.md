@@ -43,7 +43,21 @@ toast('Success message', 'success');
      desc: 'One-line description',
      color: '#HEX',
      test_endpoint: 'https://api.example.com/v1/chat/completions',
-     test_method: 'openai',      // or 'gemini', 'claude', 'cohere'
+     test_method: 'openai',      // or 'gemini', 'cohere'
+     free_tier: false,           // true if the provider offers free API keys
+     recommended_rank: null,     // 1-N to promote on the dashboard rail, or null
+     guide: {                    // Optional but recommended — populates the editor's right column
+       signup_url: 'https://...',
+       key_url: 'https://...',
+       key_format: 'Starts with "abc-".',
+       free_tier: 'Note about pricing / free quota.',
+       steps: [
+         { title: 'Step 1', body: 'Describe step 1.' }
+       ],
+       troubleshooting: [
+         { issue: 'Common error', fix: 'How to fix.' }
+       ]
+     },
      models: [
        { id: 'model-id', label: 'Model Name', category: 'balanced',
          default_temp: 0.7, max_tokens: 8192 }
@@ -52,16 +66,25 @@ toast('Success message', 'success');
    ```
 
 2. Add the ID to `PROVIDER_ORDER` (controls iteration + display order).
-3. If the icon name isn't in `icon()`'s map, add it (Part 1 §7).
-4. If the provider supports `/v1/models`, add it to `MODEL_LIST_ENDPOINTS` in Part 2B §2.
-5. `migrateData()` automatically seeds the new provider for existing users on next page load — no migration script needed.
-6. **Test**: load a node, navigate to Providers view, confirm the new provider appears in the list. Click Configure, enter a key, hit Verify.
+3. If you want the provider promoted on the dashboard's Recommended Free Providers rail, also add the ID to `RECOMMENDED_ORDER`.
+4. If the icon name isn't in `icon()`'s map, add it (Part 1 §7 utilities).
+5. If the provider supports `/v1/models`, add it to `MODEL_LIST_ENDPOINTS` in Part 2B §2.
+6. `migrateData()` automatically seeds the new provider for existing users on next page load — no migration script needed.
+7. **Test**: load a node, navigate to Providers view, confirm the new provider appears in the list. Click Configure, the full-page editor opens at `#provider/<id>` with the guide panel on the right. Enter a key, hit Verify.
+
+---
+
+## Removing or retiring a provider
+
+Add an entry to `REMOVED_PROVIDERS` in Part 1 §1 (key = provider id, value = removal reason). `migrateData()` strips matching entries from `S.data.providers[]` on next load, logs the removal in the activity feed, and clears the profile default if it pointed at the retired provider. The user's stored data IS modified; this is destructive. Document the change as BREAKING in the CHANGELOG because consumer apps reading `field_llm_config` will see the provider disappear.
+
+The historical Claude removal in v0.2.0 is the reference example.
 
 ---
 
 ## Adding a New Test Method
 
-Used when a provider has an auth pattern not covered by `gemini`/`claude`/`cohere`/`openai`.
+Used when a provider has an auth pattern not covered by `gemini`/`cohere`/`openai`.
 
 1. Add a new `case` to `buildTestRequest()` in Part 2A §5:
 
