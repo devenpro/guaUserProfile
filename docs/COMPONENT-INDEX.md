@@ -2,7 +2,7 @@
 
 Auto-generated from `components/**/*.component.json` by `scripts/build-component-index.mjs`. **Do not edit by hand** — your changes will be overwritten on the next build. Edit the source `.component.json` files and re-run the generator.
 
-Total components: 6.
+Total components: 7.
 
 ---
 
@@ -12,7 +12,8 @@ Total components: 6.
 |---|---|---|---|
 | **dashboard** | Renders the #dashboard hash route. Shows the active provider grid (one card per enabled provider with model count + key status), the welcome guide (only when zero providers configured), the Recommended Providers rail (lists unconfigured RECOMMENDED_ORDER providers — Gemini, Groq, Hugging Face, OpenRouter, Mistral, DeepSeek, Together — visible as long as ≥1 is still unconfigured), and the recent activity feed (collapsed to last 5 by default, expandable to last 50). | `renderDashboard` | [src/10-part1/09-dashboard.js:4](src/10-part1/09-dashboard.js) |
 | **models** | Renders the #models hash route. Per-provider model tables with active toggle, default-star, category pill (fast/balanced/powerful), temperature & token display, fuzzy search across all models, bulk enable/disable per provider, and a live-refresh button for providers that expose /v1/models. Profile-level default-provider selector at the bottom. | `renderModels` | [src/10-part1/up-part1.js:1005](src/10-part1/up-part1.js) |
-| **providers** | Renders the #providers hash route. Full provider list with a 5-filter toolbar (all / configured / unconfigured / major / infra), inline quick-test button per row, enable/disable toggle, and a Configure/Manage button that opens the Part-2A provider modal. | `renderProviders` | [src/10-part1/up-part1.js:878](src/10-part1/up-part1.js) |
+| **provider-editor** | Full-page provider configuration view at hash #provider/<id>. Replaces the v0.1.x modal-based 3-step configurator. Two-column layout: left column hosts the API-key + verify form, model selection list, and default parameter controls; right column hosts the per-provider guide (signup link, key URL, free-tier note, ordered setup steps, troubleshooting list — all sourced from MODEL_CATALOG[id].guide). Reuses the same form-field IDs as the old modal (#upProviderKey, #upParamTemp, .up-mm-toggle, .up-mm-star) so 08-events.js handlers work unchanged. Sticky action bar at the bottom of the left column hosts Cancel/Save/Remove. | `renderProviderEditor` | [src/20-part2a/04b-provider-editor-view.js:23](src/20-part2a/04b-provider-editor-view.js) |
+| **providers** | Renders the #providers hash route. Full provider list with a 5-filter toolbar (all / configured / unconfigured / major / infra), inline quick-test button per row, enable/disable toggle, and a Configure/Manage button that navigates to the full-page provider editor at #provider/<id> (v0.2.0+ — previously opened a modal). | `renderProviders` | [src/10-part1/up-part1.js:878](src/10-part1/up-part1.js) |
 
 ## AI Actions
 
@@ -100,9 +101,46 @@ Renders the #models hash route. Per-provider model tables with active toggle, de
 
 ---
 
+### provider-editor  `view`
+
+Full-page provider configuration view at hash #provider/<id>. Replaces the v0.1.x modal-based 3-step configurator. Two-column layout: left column hosts the API-key + verify form, model selection list, and default parameter controls; right column hosts the per-provider guide (signup link, key URL, free-tier note, ordered setup steps, troubleshooting list — all sourced from MODEL_CATALOG[id].guide). Reuses the same form-field IDs as the old modal (#upProviderKey, #upParamTemp, .up-mm-toggle, .up-mm-star) so 08-events.js handlers work unchanged. Sticky action bar at the bottom of the left column hosts Cancel/Save/Remove.
+
+**Entry:** `renderProviderEditor` at `src/20-part2a/04b-provider-editor-view.js:23`
+
+**Schema source:** `components/views/provider-editor.component.json`
+
+**Triggers:**
+
+- navigate('provider/<id>')
+- hashchange to #provider/<id>
+- click on any [data-action="open-provider"] element (dashboard active cards, Recommended rail cards, providers list cards, welcome guide CTA)
+
+**Reads:**
+
+- State: `S.providerMap[id]`, `S.editingProviderId`, `S.previousView`, `Constants.MODEL_CATALOG[id]`, `Constants.CATEGORY_LABELS`
+- DOM: `#upProviderKey value`, `#upParamTemp value`, `#upParamTokens value`, `#upParamTopP value`, `.up-mm-toggle (per-model checkbox state)`, `.up-mm-star.up-star--on (default-model selection)`
+
+**Writes:**
+
+- State: `S.providerMap[id].api_key (via key-verify handler)`, `S.providerMap[id].key_verified, key_verified_at (via verify-key handler)`, `S.providerMap[id].models[*].active, is_default, temperature, max_tokens, top_p (on save)`, `S.providerMap[id].enabled, active (on save / verify)`, `S.data.default_provider, default_model (auto-assigned on first save when none exists)`, `S.previousView, S.currentView, S.editingProviderId (via navigate)`
+- DOM: `#upContent innerHTML (full re-render via renderCurrentView)`, `window.location.hash`
+
+**Failure modes:**
+
+- **Provider id in URL does not exist in S.providerMap** — navigate() falls back to 'dashboard'. If the route is reached directly (e.g. bookmark to a retired provider like #provider/claude), renderProviderEditor renders a 'Provider not found' empty state with a Back-to-Providers button.
+- **Custom provider with no MODEL_CATALOG entry** — Synthesises a catInfo from prov.* fields and renders a fallback 'Custom provider' card in place of the guide column.
+- **Part 2A not yet loaded when renderCurrentView dispatches to R.providerEditor** — 06-navigation.js falls back to a 'Loading editor…' empty state until Part 2A registers the renderer and triggers its own render().
+- **Key verify failed but user clicked Save** — Save button is disabled until key_verified is true (visible in the editor as a disabled button with a 'Verify the API key first' tooltip).
+
+**Tags:** `view` · `provider-editor` · `configuration` · `guide` · `full-page` · `hash-route`
+
+**Related:** `dashboard`, `providers`, `models`, `key-verify`
+
+---
+
 ### providers  `view`
 
-Renders the #providers hash route. Full provider list with a 5-filter toolbar (all / configured / unconfigured / major / infra), inline quick-test button per row, enable/disable toggle, and a Configure/Manage button that opens the Part-2A provider modal.
+Renders the #providers hash route. Full provider list with a 5-filter toolbar (all / configured / unconfigured / major / infra), inline quick-test button per row, enable/disable toggle, and a Configure/Manage button that navigates to the full-page provider editor at #provider/<id> (v0.2.0+ — previously opened a modal).
 
 **Entry:** `renderProviders` at `src/10-part1/up-part1.js:878`
 
@@ -129,7 +167,7 @@ Renders the #providers hash route. Full provider list with a 5-filter toolbar (a
 
 **Tags:** `view` · `providers` · `filter-toolbar` · `quick-test` · `enable-toggle`
 
-**Related:** `dashboard`, `models`, `key-verify`
+**Related:** `dashboard`, `models`, `provider-editor`, `key-verify`
 
 ---
 

@@ -47,18 +47,16 @@
       toast(prov.label + (prov.enabled ? ' enabled' : ' disabled'), 'success');
     });
 
-    // Open provider modal (Part 2A will handle this — for now, navigate to providers)
+    // Open the full-page provider editor at #provider/<id>. The route is
+    // recognised by readHash + navigate (06-navigation.js) and dispatched
+    // to R.providerEditor (registered by Part 2A). If Part 2A hasn't loaded
+    // yet the navigation still happens — renderCurrentView shows a
+    // loading shim until Part 2A's re-render kicks in.
     $(document).off('click.up-op', '[data-action="open-provider"]').on('click.up-op', '[data-action="open-provider"]', function(e) {
       e.preventDefault();
       var providerId = $(this).data('provider');
-      // Part 2A will override this to open a modal
-      var R = window._upRenderers;
-      if (R.openProviderModal) {
-        R.openProviderModal(providerId);
-      } else {
-        console.log('[UP] Provider clicked: ' + providerId + ' (modal not yet available — Part 2A)');
-        navigate('providers');
-      }
+      if (!providerId) return;
+      navigate(PROVIDER_EDITOR_HASH_PREFIX + providerId);
     });
 
     // Add custom provider (Part 2A will handle the modal)
@@ -140,10 +138,16 @@
       setTimeout(function() { $t.remove(); }, 300);
     });
 
-    // Hash change
+    // Hash change. readHash() returns either a top-level view id or the
+    // parameterised "provider/<id>" route. Reconstruct what the hash
+    // *should* be from the current internal state so we don't re-navigate
+    // when the URL already matches (which would cause an extra render).
     $(window).off('hashchange.up').on('hashchange.up', function() {
       var h = readHash();
-      if (h !== S.currentView) navigate(h);
+      var currentRouteHash = (S.currentView === 'provider-editor' && S.editingProviderId)
+        ? PROVIDER_EDITOR_HASH_PREFIX + S.editingProviderId
+        : S.currentView;
+      if (h !== currentRouteHash) navigate(h);
     });
   }
 

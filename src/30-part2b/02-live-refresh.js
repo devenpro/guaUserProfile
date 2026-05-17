@@ -33,7 +33,7 @@
     toast('Refreshing models for ' + prov.label + '...', 'info', 2000);
 
     // Disable refresh buttons for this provider
-    var $refreshBtns = $('[data-action="live-refresh"][data-provider="' + providerId + '"], [data-action="live-refresh-modal"][data-provider="' + providerId + '"]');
+    var $refreshBtns = $('[data-action="live-refresh"][data-provider="' + providerId + '"]');
     $refreshBtns.prop('disabled', true).addClass('up-btn-loading').html('<span class="up-spinner"></span> Refreshing...');
 
     var headers = { 'Content-Type': 'application/json' };

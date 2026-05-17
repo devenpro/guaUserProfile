@@ -46,7 +46,6 @@
   function closeModal() {
     $('.up-modal-backdrop').remove();
     currentModal = null;
-    _verifyingProvider = null;
   }
 
   function openConfirmDialog(opts) {

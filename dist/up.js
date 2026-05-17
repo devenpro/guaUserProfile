@@ -1,6 +1,6 @@
-/* User Profile v0.1.4 · built 2026-05-17T05:36:35.263Z · 34 source files (see src/) */
+/* User Profile v0.1.4 · built 2026-05-17T05:45:20.518Z · 35 source files (see src/) */
 window.UP_VERSION = "0.1.4";
-window.UP_BUILD_TIME = "2026-05-17T05:36:35.263Z";
+window.UP_BUILD_TIME = "2026-05-17T05:45:20.518Z";
 
 /* ===== src/10-part1/00-header.js ===== */
 /**
@@ -485,6 +485,7 @@ window.UP_BUILD_TIME = "2026-05-17T05:36:35.263Z";
     // UI state
     currentView: 'dashboard',
     previousView: null,
+    editingProviderId: null,    // Set when currentView === 'provider-editor' (hash #provider/<id>)
     providerFilter: 'all',
     modelSearch: '',
     activityExpanded: false,
@@ -725,7 +726,18 @@ window.UP_BUILD_TIME = "2026-05-17T05:36:35.263Z";
       }
     }
 
-    S.currentView = readHash();
+    // Resolve initial route. readHash() may return either a top-level
+    // view id ('dashboard'|'providers'|'models') or the parameterised
+    // editor route ('provider/<id>'). The renderCurrentView switch
+    // expects the *resolved* view id, so we split out the providerId
+    // and set both fields here.
+    var initialHash = readHash();
+    if (initialHash.indexOf(PROVIDER_EDITOR_HASH_PREFIX) === 0) {
+      S.currentView = 'provider-editor';
+      S.editingProviderId = initialHash.slice(PROVIDER_EDITOR_HASH_PREFIX.length);
+    } else {
+      S.currentView = initialHash;
+    }
   }
 
   // ============================================================
@@ -818,16 +830,44 @@ window.UP_BUILD_TIME = "2026-05-17T05:36:35.263Z";
   // SECTION 6: NAVIGATION
   // ============================================================
 
+  // Hash format:
+  //   #dashboard, #providers, #models  → top-level views in APP_VIEWS
+  //   #provider/<id>                    → full-page provider editor (parameterised)
+  //   anything else                     → falls back to #dashboard
   function readHash() {
     var h = window.location.hash.replace('#', '');
-    return APP_VIEWS[h] ? h : 'dashboard';
+    if (APP_VIEWS[h]) return h;
+    if (h.indexOf(PROVIDER_EDITOR_HASH_PREFIX) === 0 && h.length > PROVIDER_EDITOR_HASH_PREFIX.length) {
+      var id = h.slice(PROVIDER_EDITOR_HASH_PREFIX.length);
+      if (S.providerMap && S.providerMap[id]) return h;
+    }
+    return 'dashboard';
   }
 
-  function navigate(viewId) {
-    if (!APP_VIEWS[viewId]) viewId = 'dashboard';
+  // Accepts either a top-level view id ('dashboard'|'providers'|'models')
+  // or a parameterised editor route ('provider/<id>'). Anything else falls
+  // back to the dashboard.
+  function navigate(target) {
+    var view = 'dashboard';
+    var providerId = null;
+    var hashOut = 'dashboard';
+
+    if (APP_VIEWS[target]) {
+      view = target;
+      hashOut = target;
+    } else if (target && target.indexOf(PROVIDER_EDITOR_HASH_PREFIX) === 0) {
+      var id = target.slice(PROVIDER_EDITOR_HASH_PREFIX.length);
+      if (id && S.providerMap && S.providerMap[id]) {
+        view = 'provider-editor';
+        providerId = id;
+        hashOut = target;
+      }
+    }
+
     S.previousView = S.currentView;
-    S.currentView = viewId;
-    window.location.hash = viewId;
+    S.currentView = view;
+    S.editingProviderId = providerId;
+    window.location.hash = hashOut;
     renderCurrentView();
   }
 
@@ -845,25 +885,37 @@ window.UP_BUILD_TIME = "2026-05-17T05:36:35.263Z";
     // by every other app on the platform.
     try {
       switch (S.currentView) {
-        case 'dashboard':  html = renderDashboard(); break;
-        case 'providers':  html = R.providers ? R.providers() : renderProviders(); break;
-        case 'models':     html = R.models ? R.models() : renderModels(); break;
-        default:           html = renderDashboard(); break;
+        case 'dashboard':       html = renderDashboard(); break;
+        case 'providers':       html = R.providers ? R.providers() : renderProviders(); break;
+        case 'models':          html = R.models ? R.models() : renderModels(); break;
+        case 'provider-editor':
+          if (R.providerEditor && S.editingProviderId) {
+            html = R.providerEditor(S.editingProviderId);
+          } else {
+            // Part 2A hasn't loaded yet (or no provider id) — show a
+            // loading shim so the page is not blank.
+            html = '<div class="up-empty-state"><div class="up-empty-state-icon">' + icon('clock') + '</div><div class="up-empty-state-title">Loading editor…</div><div class="up-empty-state-text">If this persists, refresh the page.</div></div>';
+          }
+          break;
+        default:                html = renderDashboard(); break;
       }
       $c.html(html);
 
       // Call view-specific event setup if registered
       if (S.currentView === 'providers' && R.setupProvidersEvents) R.setupProvidersEvents();
       if (S.currentView === 'models' && R.setupModelsEvents) R.setupModelsEvents();
+      if (S.currentView === 'provider-editor' && R.setupProviderEditorEvents) R.setupProviderEditorEvents();
     } catch (err) {
       console.error('[UP] renderCurrentView crashed for view "' + S.currentView + '":', err);
       $c.html(renderCrashCard(S.currentView, err));
     }
 
     // Update nav active state (always runs, even after a crash, so the
-    // sidebar reflects the requested view).
+    // sidebar reflects the requested view). The provider-editor sub-route
+    // highlights the Providers item so users have a "where am I" cue.
     $('.up-nav-item').removeClass('up-nav-item-active');
-    $('.up-nav-item[data-view="' + S.currentView + '"]').addClass('up-nav-item-active');
+    var navHighlight = S.currentView === 'provider-editor' ? 'providers' : S.currentView;
+    $('.up-nav-item[data-view="' + navHighlight + '"]').addClass('up-nav-item-active');
 
     // Update nav badges (defensively wrapped — counts may be stale if a
     // render path crashed mid-update, but the badges should still refresh
@@ -1627,18 +1679,16 @@ window.UP_BUILD_TIME = "2026-05-17T05:36:35.263Z";
       toast(prov.label + (prov.enabled ? ' enabled' : ' disabled'), 'success');
     });
 
-    // Open provider modal (Part 2A will handle this — for now, navigate to providers)
+    // Open the full-page provider editor at #provider/<id>. The route is
+    // recognised by readHash + navigate (06-navigation.js) and dispatched
+    // to R.providerEditor (registered by Part 2A). If Part 2A hasn't loaded
+    // yet the navigation still happens — renderCurrentView shows a
+    // loading shim until Part 2A's re-render kicks in.
     $(document).off('click.up-op', '[data-action="open-provider"]').on('click.up-op', '[data-action="open-provider"]', function(e) {
       e.preventDefault();
       var providerId = $(this).data('provider');
-      // Part 2A will override this to open a modal
-      var R = window._upRenderers;
-      if (R.openProviderModal) {
-        R.openProviderModal(providerId);
-      } else {
-        console.log('[UP] Provider clicked: ' + providerId + ' (modal not yet available — Part 2A)');
-        navigate('providers');
-      }
+      if (!providerId) return;
+      navigate(PROVIDER_EDITOR_HASH_PREFIX + providerId);
     });
 
     // Add custom provider (Part 2A will handle the modal)
@@ -1720,10 +1770,16 @@ window.UP_BUILD_TIME = "2026-05-17T05:36:35.263Z";
       setTimeout(function() { $t.remove(); }, 300);
     });
 
-    // Hash change
+    // Hash change. readHash() returns either a top-level view id or the
+    // parameterised "provider/<id>" route. Reconstruct what the hash
+    // *should* be from the current internal state so we don't re-navigate
+    // when the URL already matches (which would cause an extra render).
     $(window).off('hashchange.up').on('hashchange.up', function() {
       var h = readHash();
-      if (h !== S.currentView) navigate(h);
+      var currentRouteHash = (S.currentView === 'provider-editor' && S.editingProviderId)
+        ? PROVIDER_EDITOR_HASH_PREFIX + S.editingProviderId
+        : S.currentView;
+      if (h !== currentRouteHash) navigate(h);
     });
   }
 
@@ -1923,9 +1979,13 @@ window.UP_BUILD_TIME = "2026-05-17T05:36:35.263Z";
     buildLLMConfig = window._upBuildLLMConfig;
     Constants = window._upConstants;
 
-    // Register renderers
+    // Register renderers — these are looked up by Part 1's
+    // renderCurrentView (06-navigation.js) and by event handlers in
+    // 12-events.js. The full-page provider editor lives in Part 2A
+    // because it shares verify/save logic with the rest of this part.
     var R = window._upRenderers = window._upRenderers || {};
-    R.openProviderModal = openProviderModal;
+    R.providerEditor = renderProviderEditor;
+    R.setupProviderEditorEvents = setupProviderEditorEvents;
     R.openAddCustomProviderModal = openAddCustomProviderModal;
 
     // Wrap handler-setup so a failure here does not cascade into Part 2B.
@@ -1990,7 +2050,6 @@ window.UP_BUILD_TIME = "2026-05-17T05:36:35.263Z";
   function closeModal() {
     $('.up-modal-backdrop').remove();
     currentModal = null;
-    _verifyingProvider = null;
   }
 
   function openConfirmDialog(opts) {
@@ -2051,108 +2110,18 @@ window.UP_BUILD_TIME = "2026-05-17T05:36:35.263Z";
   // ============================================================
 
 /* ===== src/20-part2a/04-provider-modal.js ===== */
-  // SECTION 4: PROVIDER CONFIGURATION MODAL (3-step flow)
+  // SECTION 4: PROVIDER FORM HELPERS
   // ============================================================
-
-  var _verifyingProvider = null;
-
-  function openProviderModal(providerId) {
-    var prov = S.providerMap[providerId];
-    if (!prov) { toast('Provider not found', 'error'); return; }
-
-    // Build catInfo — from catalog or from custom provider data
-    var catInfo = Constants.MODEL_CATALOG[providerId];
-    if (!catInfo) {
-      // Custom provider — build a synthetic catInfo from provider data
-      catInfo = {
-        label: prov.label || providerId,
-        icon: 'sparkles',
-        category: prov.category || 'custom',
-        desc: prov.custom ? 'Custom provider' : '',
-        color: prov.color || '#6b7280',
-        test_endpoint: prov.test_endpoint || '',
-        test_method: prov.test_method || 'openai',
-        models: (prov.models || []).map(function(m) { return { id: m.id, label: m.label, category: m.category || 'balanced', default_temp: m.temperature || 0.7, max_tokens: m.max_tokens || 8192 }; })
-      };
-    }
-
-    var isVerified = prov.key_verified && prov.api_key;
-    _verifyingProvider = providerId;
-
-    var content = renderProviderModalContent(prov, catInfo, isVerified);
-
-    var footerLeft = '';
-    if (prov.active && prov.key_verified) {
-      footerLeft = '<button class="up-btn up-btn-danger up-btn-sm" data-action="remove-provider" data-provider="' + esc(providerId) + '">' + icon('trash') + ' Remove Provider</button>';
-    }
-
-    openModal(catInfo.label, content, {
-      size: 'lg',
-      headerIcon: catInfo.icon,
-      headerIconColor: catInfo.color,
-      subtitle: catInfo.desc,
-      saveLabel: isVerified ? 'Save Provider' : false,
-      footerLeft: footerLeft,
-      onSave: function() { saveProviderFromModal(providerId); }
-    });
-  }
-
-  function renderProviderModalContent(prov, catInfo, isVerified) {
-    var html = '';
-
-    // ── Step 1: API Key ──
-    html += '<div class="up-config-step">';
-    html += '<div class="up-step-header">';
-    html += '<span class="up-step-num ' + (isVerified ? 'up-step-num--done' : 'up-step-num--active') + '">' + (isVerified ? icon('check') : '1') + '</span>';
-    html += '<span class="up-step-title">API Key</span>';
-    if (isVerified) html += '<span class="up-step-badge up-step-badge--success">' + icon('shield-check') + ' Verified</span>';
-    html += '</div>';
-    html += '<div class="up-step-body">';
-    html += '<div class="up-key-row">';
-    html += '<input type="text" class="up-input up-key-input" id="upProviderKey" placeholder="Enter your ' + esc(catInfo.label) + ' API key..." value="' + esc(prov.api_key || '') + '" autocomplete="off" spellcheck="false">';
-    html += '<button class="up-btn ' + (isVerified ? 'up-btn-success' : 'up-btn-primary') + '" id="upVerifyBtn" data-action="verify-key" data-provider="' + esc(prov.id) + '">';
-    html += isVerified ? icon('check') + ' Verified' : icon('shield-check') + ' Verify Key';
-    html += '</button>';
-    html += '</div>';
-    html += '<div id="upVerifyStatus"></div>';
-    if (prov.key_verified_at) {
-      html += '<div class="up-key-meta">' + icon('clock') + ' Last verified: ' + formatRelativeTime(prov.key_verified_at) + '</div>';
-    }
-    html += '</div></div>';
-
-    // ── Step 2: Select Models ──
-    html += '<div class="up-config-step' + (isVerified ? '' : ' up-config-step--locked') + '" id="upModelStep">';
-    html += '<div class="up-step-header">';
-    html += '<span class="up-step-num ' + (isVerified ? 'up-step-num--active' : '') + '">2</span>';
-    html += '<span class="up-step-title">Select Models</span>';
-    if (!isVerified) html += '<span class="up-step-lock">' + icon('lock') + ' Verify key first</span>';
-    html += '</div>';
-    if (isVerified) {
-      html += '<div class="up-step-body">';
-      html += renderModelSelectionList(prov, catInfo);
-      html += '<button class="up-btn up-btn-xs up-btn-outline up-refresh-btn" data-action="live-refresh-modal" data-provider="' + esc(prov.id) + '" style="margin-top:var(--up-space-3)">';
-      html += icon('refresh') + ' Refresh from API';
-      html += '</button>';
-      html += '</div>';
-    }
-    html += '</div>';
-
-    // ── Step 3: Default Parameters ──
-    html += '<div class="up-config-step' + (isVerified ? '' : ' up-config-step--locked') + '" id="upParamStep">';
-    html += '<div class="up-step-header">';
-    html += '<span class="up-step-num ' + (isVerified ? 'up-step-num--active' : '') + '">3</span>';
-    html += '<span class="up-step-title">Default Parameters</span>';
-    if (!isVerified) html += '<span class="up-step-lock">' + icon('lock') + ' Verify key first</span>';
-    html += '</div>';
-    if (isVerified) {
-      html += '<div class="up-step-body">';
-      html += renderParameterControls(prov);
-      html += '</div>';
-    }
-    html += '</div>';
-
-    return html;
-  }
+  //
+  // Shared form-rendering helpers used by the full-page provider editor
+  // (see 04b-provider-editor-view.js). Previously this file also hosted
+  // openProviderModal() — a 3-step modal-based configurator — but that
+  // flow was replaced by the full-page editor view in v0.2.0. The form
+  // field IDs and class names below are deliberately preserved (e.g.
+  // #upProviderKey, #upParamTemp, .up-mm-toggle, .up-mm-star) so the
+  // shared event handlers in 08-events.js continue to work without
+  // surface-specific branching.
+  // ============================================================
 
   function renderModelSelectionList(prov, catInfo) {
     var models = prov.models || [];
@@ -2238,6 +2207,270 @@ window.UP_BUILD_TIME = "2026-05-17T05:36:35.263Z";
 
     html += '</div>';
     return html;
+  }
+
+  // ============================================================
+
+/* ===== src/20-part2a/04b-provider-editor-view.js ===== */
+  // SECTION 4B: PROVIDER EDITOR VIEW (full-page)
+  // ============================================================
+  //
+  // Replaces the old modal-based provider configurator with a dedicated
+  // hash-routed view at #provider/<id>. Rendered by Part 1's
+  // renderCurrentView() when S.currentView === 'provider-editor'.
+  //
+  // Layout (two columns on desktop, stacked on mobile):
+  //   ┌─────────────────────────────┬──────────────────────┐
+  //   │  Header: back / icon / name / status                │
+  //   ├─────────────────────────────┼──────────────────────┤
+  //   │  Left: Key → Models → Params│  Right: Guide panel  │
+  //   │  Sticky save bar at bottom  │  (signup, steps, etc)│
+  //   └─────────────────────────────┴──────────────────────┘
+  //
+  // The form field IDs (#upProviderKey, #upParamTemp, etc.) and class
+  // names (.up-mm-toggle, .up-mm-star) are deliberately the SAME ones
+  // the old modal used so the existing event handlers in 08-events.js
+  // continue to work unchanged.
+  // ============================================================
+
+  function renderProviderEditor(providerId) {
+    var prov = S.providerMap[providerId];
+    if (!prov) {
+      return '<div class="up-empty-state">' +
+        '<div class="up-empty-state-icon">' + icon('triangle-exclamation') + '</div>' +
+        '<div class="up-empty-state-title">Provider not found</div>' +
+        '<div class="up-empty-state-text">"' + esc(providerId) + '" is not in the catalog.</div>' +
+        '<button class="up-btn up-btn-primary" data-action="navigate" data-view="providers" style="margin-top:var(--up-space-4)">' + icon('arrow-left') + ' Back to Providers</button>' +
+        '</div>';
+    }
+
+    // Build catInfo — from catalog or synthesised from custom provider data
+    var catInfo = Constants.MODEL_CATALOG[providerId];
+    var isCustom = !catInfo;
+    if (!catInfo) {
+      catInfo = {
+        label: prov.label || providerId,
+        icon: 'sparkles',
+        category: prov.category || 'custom',
+        desc: prov.custom ? 'Custom provider' : '',
+        color: prov.color || '#6b7280',
+        test_endpoint: prov.test_endpoint || '',
+        test_method: prov.test_method || 'openai',
+        free_tier: false,
+        guide: null,
+        models: (prov.models || []).map(function(m) {
+          return { id: m.id, label: m.label, category: m.category || 'balanced', default_temp: m.temperature || 0.7, max_tokens: m.max_tokens || 8192 };
+        })
+      };
+    }
+
+    var isVerified = !!(prov.key_verified && prov.api_key);
+    var activeCount = (prov.models || []).filter(function(m) { return m.active; }).length;
+
+    var html = '<div class="up-view up-view-editor">';
+
+    // ── Header bar ──
+    html += '<div class="up-editor-topbar">';
+    html += '<button class="up-btn up-btn-outline up-btn-sm" data-action="editor-back">' + icon('arrow-left') + ' Back</button>';
+    html += '<div class="up-editor-titlewrap">';
+    html += '<span class="up-editor-titleicon" style="background:' + catInfo.color + '">' + icon(catInfo.icon) + '</span>';
+    html += '<div class="up-editor-titletext">';
+    html += '<h2>' + esc(catInfo.label) + '</h2>';
+    html += '<span class="up-editor-titlesub">' + esc(catInfo.desc) + '</span>';
+    html += '</div>';
+    html += '</div>';
+    html += '<div class="up-editor-status">';
+    if (isVerified) {
+      html += '<span class="up-step-badge up-step-badge--success">' + icon('shield-check') + ' Verified</span>';
+      if (prov.enabled) {
+        html += '<span class="up-status-on">' + icon('circle-dot') + ' ' + activeCount + ' active model' + (activeCount !== 1 ? 's' : '') + '</span>';
+      } else {
+        html += '<span class="up-status-off">' + icon('pause') + ' Disabled</span>';
+      }
+    } else if (prov.api_key) {
+      html += '<span class="up-step-badge up-step-badge--warning">' + icon('triangle-exclamation') + ' Not verified</span>';
+    } else if (catInfo.free_tier) {
+      html += '<span class="up-rec-free-pill">' + icon('check') + ' Free tier</span>';
+    }
+    html += '</div>';
+    html += '</div>';
+
+    // ── Two-column body ──
+    html += '<div class="up-editor-body">';
+
+    // LEFT: Configuration form
+    html += '<div class="up-editor-form-col">';
+
+    // Step 1: API Key + Verify
+    html += '<div class="up-editor-section">';
+    html += '<div class="up-editor-section-header">';
+    html += '<span class="up-step-num ' + (isVerified ? 'up-step-num--done' : 'up-step-num--active') + '">' + (isVerified ? icon('check') : '1') + '</span>';
+    html += '<h3>API Key</h3>';
+    if (catInfo.guide && catInfo.guide.key_url) {
+      html += '<a href="' + esc(catInfo.guide.key_url) + '" target="_blank" rel="noopener" class="up-editor-keylink">' + icon('link') + ' Get key from ' + esc(catInfo.label) + '</a>';
+    }
+    html += '</div>';
+    html += '<div class="up-editor-section-body">';
+    html += '<div class="up-key-row">';
+    html += '<input type="text" class="up-input up-key-input" id="upProviderKey" placeholder="Paste your ' + esc(catInfo.label) + ' API key here" value="' + esc(prov.api_key || '') + '" autocomplete="off" spellcheck="false">';
+    html += '<button class="up-btn ' + (isVerified ? 'up-btn-success' : 'up-btn-primary') + '" id="upVerifyBtn" data-action="verify-key" data-provider="' + esc(prov.id) + '">';
+    html += isVerified ? icon('check') + ' Verified' : icon('shield-check') + ' Verify Key';
+    html += '</button>';
+    html += '</div>';
+    html += '<div id="upVerifyStatus"></div>';
+    if (catInfo.guide && catInfo.guide.key_format) {
+      html += '<div class="up-key-meta">' + icon('info') + ' ' + esc(catInfo.guide.key_format) + '</div>';
+    }
+    if (prov.key_verified_at) {
+      html += '<div class="up-key-meta">' + icon('clock') + ' Last verified: ' + formatRelativeTime(prov.key_verified_at) + '</div>';
+    }
+    html += '</div>';
+    html += '</div>';
+
+    // Step 2: Model selection (only when verified)
+    html += '<div class="up-editor-section' + (isVerified ? '' : ' up-editor-section--locked') + '">';
+    html += '<div class="up-editor-section-header">';
+    html += '<span class="up-step-num ' + (isVerified ? 'up-step-num--active' : '') + '">2</span>';
+    html += '<h3>Select Models</h3>';
+    if (!isVerified) {
+      html += '<span class="up-step-lock">' + icon('lock') + ' Verify key first</span>';
+    } else {
+      html += '<button class="up-btn up-btn-xs up-btn-outline" data-action="live-refresh" data-provider="' + esc(prov.id) + '">' + icon('refresh') + ' Refresh from API</button>';
+    }
+    html += '</div>';
+    if (isVerified) {
+      html += '<div class="up-editor-section-body">';
+      html += renderModelSelectionList(prov, catInfo);
+      if (isCustom) {
+        html += '<div class="up-custom-model-add" style="margin-top:var(--up-space-3)">';
+        html += '<span class="up-form-hint">' + icon('info') + ' Custom providers: use "Refresh from API" to discover models, or add them manually via the Models view after saving.</span>';
+        html += '</div>';
+      }
+      html += '</div>';
+    }
+    html += '</div>';
+
+    // Step 3: Default parameters
+    html += '<div class="up-editor-section' + (isVerified ? '' : ' up-editor-section--locked') + '">';
+    html += '<div class="up-editor-section-header">';
+    html += '<span class="up-step-num ' + (isVerified ? 'up-step-num--active' : '') + '">3</span>';
+    html += '<h3>Default Parameters</h3>';
+    if (!isVerified) html += '<span class="up-step-lock">' + icon('lock') + ' Verify key first</span>';
+    html += '</div>';
+    if (isVerified) {
+      html += '<div class="up-editor-section-body">';
+      html += renderParameterControls(prov);
+      html += '<div class="up-form-hint" style="margin-top:var(--up-space-3)">' + icon('info') + ' These defaults apply to every active model. Override per-model in the Models view.</div>';
+      html += '</div>';
+    }
+    html += '</div>';
+
+    // Sticky action bar at the bottom of the left column
+    html += '<div class="up-editor-actions">';
+    if (isVerified && prov.api_key) {
+      html += '<button class="up-btn up-btn-danger up-btn-sm" data-action="remove-provider" data-provider="' + esc(prov.id) + '">' + icon('trash') + ' Remove Provider</button>';
+    } else {
+      html += '<span></span>';
+    }
+    html += '<div class="up-editor-actions-right">';
+    html += '<button class="up-btn up-btn-outline" data-action="editor-back">Cancel</button>';
+    html += '<button class="up-btn up-btn-primary" data-action="editor-save" data-provider="' + esc(prov.id) + '"' + (isVerified ? '' : ' disabled title="Verify the API key first"') + '>' + icon('check') + ' Save Provider</button>';
+    html += '</div>';
+    html += '</div>';
+
+    html += '</div>'; // form-col
+
+    // RIGHT: Guide panel
+    html += '<div class="up-editor-guide-col">';
+    html += renderProviderGuide(prov, catInfo);
+    html += '</div>';
+
+    html += '</div>'; // body
+    html += '</div>'; // view
+    return html;
+  }
+
+  function renderProviderGuide(prov, catInfo) {
+    var guide = catInfo.guide;
+
+    if (!guide) {
+      // Custom provider — no built-in guide. Show a tiny info card
+      // pointing them at the test endpoint.
+      var html0 = '<div class="up-guide-card">';
+      html0 += '<h4>' + icon('info') + ' Custom provider</h4>';
+      html0 += '<p>This is a custom provider you added. We don\'t have a built-in setup guide, but you can verify connectivity using the API key from your provider\'s dashboard.</p>';
+      if (prov.test_endpoint) {
+        html0 += '<p class="up-guide-endpoint"><strong>Test endpoint:</strong><br><code>' + esc(prov.test_endpoint) + '</code></p>';
+      }
+      html0 += '</div>';
+      return html0;
+    }
+
+    var html = '';
+
+    // Quick-actions card (signup + key URL + free tier note)
+    html += '<div class="up-guide-card up-guide-card--actions">';
+    html += '<h4>' + icon('lightbulb') + ' Quick start</h4>';
+    if (guide.signup_url) {
+      html += '<a class="up-btn up-btn-outline up-btn-sm" href="' + esc(guide.signup_url) + '" target="_blank" rel="noopener">' + icon('user') + ' Sign up at ' + esc(catInfo.label) + '</a>';
+    }
+    if (guide.key_url) {
+      html += '<a class="up-btn up-btn-outline up-btn-sm" href="' + esc(guide.key_url) + '" target="_blank" rel="noopener">' + icon('key') + ' Open API keys page</a>';
+    }
+    if (guide.free_tier) {
+      html += '<div class="up-guide-freetier">';
+      html += '<strong>' + icon(catInfo.free_tier ? 'check-circle' : 'info') + ' ' + (catInfo.free_tier ? 'Free tier' : 'Pricing') + '</strong>';
+      html += '<p>' + esc(guide.free_tier) + '</p>';
+      html += '</div>';
+    }
+    html += '</div>';
+
+    // Steps
+    if (guide.steps && guide.steps.length) {
+      html += '<div class="up-guide-card">';
+      html += '<h4>' + icon('layer-group') + ' Setup steps</h4>';
+      html += '<ol class="up-guide-steps">';
+      for (var i = 0; i < guide.steps.length; i++) {
+        var s = guide.steps[i];
+        html += '<li><strong>' + esc(s.title) + '</strong><span>' + esc(s.body) + '</span></li>';
+      }
+      html += '</ol>';
+      html += '</div>';
+    }
+
+    // Troubleshooting
+    if (guide.troubleshooting && guide.troubleshooting.length) {
+      html += '<div class="up-guide-card">';
+      html += '<h4>' + icon('triangle-exclamation') + ' Troubleshooting</h4>';
+      html += '<dl class="up-guide-trouble">';
+      for (var j = 0; j < guide.troubleshooting.length; j++) {
+        var t = guide.troubleshooting[j];
+        html += '<dt>' + esc(t.issue) + '</dt>';
+        html += '<dd>' + esc(t.fix) + '</dd>';
+      }
+      html += '</dl>';
+      html += '</div>';
+    }
+
+    return html;
+  }
+
+  function setupProviderEditorEvents() {
+    // Back button — returns to whichever view brought the user to the
+    // editor. Falls back to Providers list if previousView is unset.
+    $(document).off('click.up2a-eb', '[data-action="editor-back"]').on('click.up2a-eb', '[data-action="editor-back"]', function(e) {
+      e.preventDefault();
+      var back = S.previousView || 'providers';
+      if (back === 'provider-editor') back = 'providers';
+      navigate(back);
+    });
+
+    // Save button — collects form values via saveProviderFromEditor.
+    $(document).off('click.up2a-es', '[data-action="editor-save"]').on('click.up2a-es', '[data-action="editor-save"]', function(e) {
+      e.preventDefault();
+      var providerId = $(this).data('provider') || S.editingProviderId;
+      saveProviderFromEditor(providerId);
+    });
   }
 
   // ============================================================
@@ -2460,54 +2693,13 @@ window.UP_BUILD_TIME = "2026-05-17T05:36:35.263Z";
     buildMaps();
     syncToTextarea();
 
-    // Update modal UI — unlock steps 2 & 3
-    var $btn = $('#upVerifyBtn');
-    $btn.removeClass('up-btn-loading').addClass('up-btn-success').prop('disabled', false)
-      .html(icon('check') + ' Verified');
-    $('#upVerifyStatus').html(
-      '<div class="up-alert up-alert--success">' + icon('check-circle') + ' API key is valid. ' + (prov.models || []).length + ' models available in catalog.</div>'
-    );
-
-    // Unlock model step and param step
-    var $modelStep = $('#upModelStep');
-    $modelStep.removeClass('up-config-step--locked');
-    $modelStep.find('.up-step-num').addClass('up-step-num--active');
-    $modelStep.find('.up-step-lock').remove();
-    // Render model list into step body
-    var catRef = Constants.MODEL_CATALOG[providerId];
-    // For custom providers, build a synthetic catRef
-    if (!catRef && prov.custom) {
-      catRef = { label: prov.label, icon: 'sparkles', color: prov.color || '#6b7280', models: (prov.models || []).map(function(m) { return { id: m.id, label: m.label, category: m.category || 'balanced', default_temp: m.temperature || 0.7, max_tokens: m.max_tokens || 8192 }; }) };
-    }
-    if (catRef) {
-      var stepBody = '<div class="up-step-body">' + renderModelSelectionList(prov, catRef);
-      if (prov.custom) {
-        stepBody += '<div class="up-custom-model-add" style="margin-top:var(--up-space-3)">';
-        stepBody += '<span class="up-form-hint">' + icon('info') + ' Custom providers: use Live Refresh to discover models, or add them manually via the Models view after saving.</span>';
-        stepBody += '</div>';
-      }
-      stepBody += '<button class="up-btn up-btn-xs up-btn-outline up-refresh-btn" data-action="live-refresh-modal" data-provider="' + esc(prov.id) + '" style="margin-top:var(--up-space-3)">' + icon('refresh') + ' Refresh from API</button>';
-      stepBody += '</div>';
-      $modelStep.find('.up-step-body').remove();
-      $modelStep.append(stepBody);
-    }
-
-    var $paramStep = $('#upParamStep');
-    $paramStep.removeClass('up-config-step--locked');
-    $paramStep.find('.up-step-num').addClass('up-step-num--active');
-    $paramStep.find('.up-step-lock').remove();
-    if (!$paramStep.find('.up-step-body').length) {
-      $paramStep.append('<div class="up-step-body">' + renderParameterControls(prov) + '</div>');
-    }
-
-    // Show save button in footer
-    $('.up-modal-footer-right').find('[data-action="modal-save"]').remove();
-    $('.up-modal-footer-right').append('<button class="up-btn up-btn-primary" data-action="modal-save">' + icon('check') + ' Save Provider</button>');
-
-    // Show remove button
-    if (!$('.up-modal-footer-left').length) {
-      $('.up-modal-footer').prepend('<div class="up-modal-footer-left"><button class="up-btn up-btn-danger up-btn-sm" data-action="remove-provider" data-provider="' + esc(providerId) + '">' + icon('trash') + ' Remove Provider</button></div>');
-    }
+    // Re-render the current view. The full-page editor (provider-editor)
+    // will redraw with the model selection + parameter controls now
+    // unlocked. The dashboard / providers list will redraw with the
+    // newly verified provider flipped into the verified state. The toast
+    // gives the user immediate feedback; the redraw follows.
+    toast(prov.label + ' verified — pick the models you want to expose.', 'success');
+    render();
   }
 
   function onVerifyFailure(providerId, errorMsg) {
@@ -2532,9 +2724,9 @@ window.UP_BUILD_TIME = "2026-05-17T05:36:35.263Z";
   // SECTION 6: PROVIDER SAVE & REMOVE
   // ============================================================
 
-  function saveProviderFromModal(providerId) {
-    var prov = S.providerMap[providerId || _verifyingProvider];
-    if (!prov) { closeModal(); return; }
+  function saveProviderFromEditor(providerId) {
+    var prov = S.providerMap[providerId];
+    if (!prov) { navigate('providers'); return; }
 
     // Collect model toggles
     $('.up-mm-toggle').each(function() {
@@ -2606,8 +2798,12 @@ window.UP_BUILD_TIME = "2026-05-17T05:36:35.263Z";
     snapshot('Save ' + prov.label);
     buildMaps();
     syncToTextarea();
-    closeModal();
-    render();
+
+    // Navigate back to the Providers list after saving so the user can
+    // see the updated card in context. If they came from the dashboard
+    // (e.g., via a Recommended rail card) send them back there instead.
+    var returnTo = (S.previousView === 'dashboard') ? 'dashboard' : 'providers';
+    navigate(returnTo);
     toast(prov.label + ' configuration saved', 'success');
   }
 
@@ -2652,8 +2848,15 @@ window.UP_BUILD_TIME = "2026-05-17T05:36:35.263Z";
         snapshot('Remove ' + prov.label);
         buildMaps();
         syncToTextarea();
-        closeModal();
-        render();
+
+        // If the user was on the provider's editor, leave it — the
+        // provider no longer has a key. Otherwise stay on whatever
+        // view called Remove.
+        if (S.currentView === 'provider-editor' && S.editingProviderId === providerId) {
+          navigate('providers');
+        } else {
+          render();
+        }
         toast(prov.label + ' removed', 'success');
       }
     });
@@ -2875,14 +3078,12 @@ window.UP_BUILD_TIME = "2026-05-17T05:36:35.263Z";
       if ($(e.target).hasClass('up-modal-backdrop')) closeModal();
     });
 
-    // Modal save
+    // Modal save — dispatches to whichever modal opened the dialog.
+    // All current modal callers (change-default, add-custom-provider)
+    // pass an onSave callback when calling openModal().
     $(document).off('click.up2a-ms', '[data-action="modal-save"]').on('click.up2a-ms', '[data-action="modal-save"]', function(e) {
       e.preventDefault();
-      if (currentModal && currentModal.onSave) {
-        currentModal.onSave();
-      } else if (_verifyingProvider) {
-        saveProviderFromModal(_verifyingProvider);
-      }
+      if (currentModal && currentModal.onSave) currentModal.onSave();
     });
 
     // Verify key
@@ -3005,8 +3206,8 @@ window.UP_BUILD_TIME = "2026-05-17T05:36:35.263Z";
     closeModal: closeModal,
     openConfirmDialog: openConfirmDialog,
     closeConfirmDialog: closeConfirmDialog,
-    openProviderModal: openProviderModal,
-    saveProviderFromModal: saveProviderFromModal,
+    renderProviderEditor: renderProviderEditor,
+    saveProviderFromEditor: saveProviderFromEditor,
     removeProvider: removeProvider,
     openChangeDefaultModal: openChangeDefaultModal,
     openAddCustomProviderModal: openAddCustomProviderModal,
@@ -3139,7 +3340,7 @@ window.UP_BUILD_TIME = "2026-05-17T05:36:35.263Z";
     toast('Refreshing models for ' + prov.label + '...', 'info', 2000);
 
     // Disable refresh buttons for this provider
-    var $refreshBtns = $('[data-action="live-refresh"][data-provider="' + providerId + '"], [data-action="live-refresh-modal"][data-provider="' + providerId + '"]');
+    var $refreshBtns = $('[data-action="live-refresh"][data-provider="' + providerId + '"]');
     $refreshBtns.prop('disabled', true).addClass('up-btn-loading').html('<span class="up-spinner"></span> Refreshing...');
 
     var headers = { 'Content-Type': 'application/json' };
@@ -3644,19 +3845,13 @@ window.UP_BUILD_TIME = "2026-05-17T05:36:35.263Z";
   // ============================================================
 
   function setupPart2BEvents() {
-    // Live refresh (from Models view)
+    // Live refresh from any surface (Models view, provider editor view).
+    // Both use data-action="live-refresh" — the deprecated "live-refresh-modal"
+    // variant was removed when the configurator modal was replaced by the
+    // full-page editor in v0.2.0.
     $(document).off('click.up2b-lr', '[data-action="live-refresh"]').on('click.up2b-lr', '[data-action="live-refresh"]', function(e) {
       e.preventDefault();
       liveRefreshModels($(this).data('provider'));
-    });
-
-    // Live refresh inside modal
-    $(document).off('click.up2b-lrm', '[data-action="live-refresh-modal"]').on('click.up2b-lrm', '[data-action="live-refresh-modal"]', function(e) {
-      e.preventDefault();
-      var providerId = $(this).data('provider');
-      liveRefreshModels(providerId);
-      // Re-render will close/update modal — inform user
-      toast('Model list will update after refresh completes', 'info', 2000);
     });
 
     // Export

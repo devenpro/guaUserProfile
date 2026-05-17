@@ -11,14 +11,12 @@
       if ($(e.target).hasClass('up-modal-backdrop')) closeModal();
     });
 
-    // Modal save
+    // Modal save — dispatches to whichever modal opened the dialog.
+    // All current modal callers (change-default, add-custom-provider)
+    // pass an onSave callback when calling openModal().
     $(document).off('click.up2a-ms', '[data-action="modal-save"]').on('click.up2a-ms', '[data-action="modal-save"]', function(e) {
       e.preventDefault();
-      if (currentModal && currentModal.onSave) {
-        currentModal.onSave();
-      } else if (_verifyingProvider) {
-        saveProviderFromModal(_verifyingProvider);
-      }
+      if (currentModal && currentModal.onSave) currentModal.onSave();
     });
 
     // Verify key

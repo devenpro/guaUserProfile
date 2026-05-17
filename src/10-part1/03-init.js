@@ -221,7 +221,18 @@
       }
     }
 
-    S.currentView = readHash();
+    // Resolve initial route. readHash() may return either a top-level
+    // view id ('dashboard'|'providers'|'models') or the parameterised
+    // editor route ('provider/<id>'). The renderCurrentView switch
+    // expects the *resolved* view id, so we split out the providerId
+    // and set both fields here.
+    var initialHash = readHash();
+    if (initialHash.indexOf(PROVIDER_EDITOR_HASH_PREFIX) === 0) {
+      S.currentView = 'provider-editor';
+      S.editingProviderId = initialHash.slice(PROVIDER_EDITOR_HASH_PREFIX.length);
+    } else {
+      S.currentView = initialHash;
+    }
   }
 
   // ============================================================
