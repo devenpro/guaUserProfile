@@ -1,0 +1,10 @@
+{
+  "providers": [],
+  "default_provider": "",
+  "default_model": "",
+  "preferences": {
+    "auto_sync_llm_config": true,
+    "timezone": "UTC"
+  },
+  "activity": []
+}

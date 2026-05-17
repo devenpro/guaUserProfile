@@ -1,0 +1,66 @@
+{
+  "providers": [
+    {
+      "id": "gemini",
+      "label": "Gemini",
+      "active": true,
+      "api_key": "gemini-mock-key-PLACEHOLDER",
+      "models": [
+        {
+          "id": "gemini-2.5-flash",
+          "label": "Gemini 2.5 Flash",
+          "active": true,
+          "is_default": true,
+          "temperature": 0.7,
+          "max_tokens": 8192,
+          "top_p": 0.95
+        },
+        {
+          "id": "gemini-2.5-pro",
+          "label": "Gemini 2.5 Pro",
+          "active": true,
+          "is_default": false,
+          "temperature": 0.5,
+          "max_tokens": 32768,
+          "top_p": 0.95
+        }
+      ]
+    },
+    {
+      "id": "groq",
+      "label": "Groq",
+      "active": true,
+      "api_key": "gsk_mock_PLACEHOLDER_DO_NOT_USE",
+      "models": [
+        {
+          "id": "llama-3.3-70b-versatile",
+          "label": "Llama 3.3 70B Versatile",
+          "active": true,
+          "is_default": true,
+          "temperature": 0.7,
+          "max_tokens": 8192,
+          "top_p": 0.95
+        }
+      ]
+    },
+    {
+      "id": "openrouter",
+      "label": "OpenRouter",
+      "active": true,
+      "api_key": "sk-or-v1-mockPLACEHOLDER",
+      "models": [
+        {
+          "id": "anthropic/claude-sonnet-4",
+          "label": "Claude Sonnet 4 (via OpenRouter)",
+          "active": true,
+          "is_default": true,
+          "temperature": 0.7,
+          "max_tokens": 8192,
+          "top_p": 0.95
+        }
+      ]
+    }
+  ],
+  "default_provider": "gemini",
+  "default_model": "gemini-2.5-flash"
+}

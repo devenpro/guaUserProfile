@@ -12,9 +12,11 @@ Injector module on a `user_profile` content node. Source lives in
 Part is a single IIFE distributed across numbered sub-files (Part 1:
 `00-header.js` → `15-exports.js`; Parts 2A/2B: `01-init.js` →
 `09-exports.js`). The bundler at `scripts/build.mjs` lex-concatenates
-every file under `src/` into `dist/up.js` + `dist/up.css`, which **are
-checked in**. Drupal loads the dist files from jsDelivr (or `@main`
-until Phase A wires up `@latest`). Individual source files are not
+every file under `src/` into `dist/up.js` + `dist/up.css`, then runs
+esbuild via `npx` to also emit `dist/up.min.js` (+ source map) and
+`dist/up.min.css`. All five artifacts are **checked in**. Drupal
+production loads the minified pair via jsDelivr `@latest`. Individual
+source files are not
 standalone-valid JS — the IIFE open lives in the first file of each
 Part, the close lives in the last file, and everything between is
 free-floating code inside that IIFE scope.
@@ -153,11 +155,20 @@ is merged, this happens automatically on every push to `main`.
 
 ## Build hygiene
 
-`dist/up.js` and `dist/up.css` are checked in and must move in
-lockstep with `src/`. Always rebuild + parse-check before committing
-source changes. The parse-check catches syntax errors that
-TypeScript-style tools would otherwise find — this codebase has no test
-suite.
+`dist/up.js`, `dist/up.css`, `dist/up.min.js`, `dist/up.min.js.map`, and
+`dist/up.min.css` are checked in and must move in lockstep with `src/`.
+Always rebuild + parse-check before committing source changes. The
+parse-check catches syntax errors that TypeScript-style tools would
+otherwise find — this codebase has no test suite.
+
+Production loads the minified bundles (`up.min.js`/`up.min.css`); the
+unminified pair (`up.js`/`up.css`) stays in `dist/` for debugging and
+as the input that `scripts/build.mjs` feeds to esbuild. Minification
+runs automatically inside `build.mjs` via `npx --yes esbuild`; if
+esbuild is unreachable (offline), it warns and exits 0 with only the
+unminified pair. CI always has network and is the source of truth for
+the released `dist/up.min.*`. Set `UP_SKIP_MINIFY=1` to skip the
+minification pass locally.
 
 `npm run build` runs two scripts:
 

@@ -1,0 +1,91 @@
+name: Build
+
+# Rebuilds dist/up.js + dist/up.css + docs/COMPONENT-INDEX.md on every
+# push to a non-main feature branch. Lets contributors edit src/ from
+# a mobile/web-only environment (Claude Code on the web, GitHub web UI,
+# Codespaces) without needing a local Node install — the bot keeps
+# dist/ in sync so PR diffs and the eventual squash-merge are correct.
+#
+# Why this is separate from release.yml: release.yml runs on push to
+# main, bumps the version, tags, and publishes. This workflow only
+# rebuilds dist/ and pushes it back to the same feature branch. No
+# version bump, no tag, no GitHub Release.
+#
+# Skip conditions:
+#   - Pushes to main are handled by release.yml.
+#   - Commits the bot itself made (subject begins with `[ci]`) are
+#     ignored to avoid recursive triggers.
+#   - Commits with no src/, scripts/, or components/ changes skip the
+#     rebuild check entirely.
+
+on:
+  push:
+    branches-ignore:
+      - main
+
+permissions:
+  contents: write
+
+concurrency:
+  # One in-flight build per branch; cancel older ones if a new push
+  # arrives so we don't push stale dist/ on top of newer source.
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  rebuild-dist:
+    if: ${{ !startsWith(github.event.head_commit.message, '[ci]') && !startsWith(github.event.head_commit.message, '[release]') }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          persist-credentials: true
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Detect relevant changes
+        id: detect
+        run: |
+          # Compare the pushed commit to its parent. If neither src/,
+          # scripts/, nor components/ changed, there's nothing to rebuild.
+          if git diff --name-only "${{ github.event.before }}..${{ github.sha }}" 2>/dev/null | grep -qE '^(src/|scripts/|components/)'; then
+            echo "needs_rebuild=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "needs_rebuild=false" >> "$GITHUB_OUTPUT"
+            echo "No src/, scripts/, or components/ changes — skipping rebuild."
+          fi
+
+      - name: Build bundle + component index
+        if: steps.detect.outputs.needs_rebuild == 'true'
+        run: |
+          node scripts/build.mjs
+          node scripts/build-component-index.mjs
+
+      - name: Parse-check dist/up.js
+        if: steps.detect.outputs.needs_rebuild == 'true'
+        run: |
+          node -e "new Function(require('fs').readFileSync('dist/up.js','utf8'))"
+
+      - name: Configure git
+        if: steps.detect.outputs.needs_rebuild == 'true'
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Commit + push if dist/ changed
+        if: steps.detect.outputs.needs_rebuild == 'true'
+        run: |
+          if git diff --quiet -- dist/ docs/COMPONENT-INDEX.md; then
+            echo "dist/ and component index unchanged — nothing to commit."
+            exit 0
+          fi
+          git add dist/up.js dist/up.css dist/up.min.js dist/up.min.js.map dist/up.min.css docs/COMPONENT-INDEX.md
+          git commit -m "[ci] rebuild dist from ${GITHUB_SHA::7}"
+          git push origin HEAD:${GITHUB_REF#refs/heads/}

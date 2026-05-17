@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+# User Profile pre-commit hook
+#
+# Installed by `bash scripts/install-hooks.sh`. Rebuilds dist/ from src/
+# when src/ files are staged, and verifies that dist/up.js parses as
+# valid JavaScript before allowing the commit through. Catches the most
+# common failure mode in this repo: source changed but dist/ wasn't
+# rebuilt, or a syntax error slipped into the concatenated bundle.
+
+set -e
+
+# Detect whether src/ is part of this commit; if not, skip the rebuild
+# (covers docs-only commits and release-bot commits).
+if git diff --cached --name-only | grep -qE '^src/'; then
+  echo "[pre-commit] src/ changed — rebuilding dist/…"
+  if ! node scripts/build.mjs >/dev/null; then
+    echo "[pre-commit] build.mjs failed. Aborting commit." >&2
+    exit 1
+  fi
+  if ! node scripts/build-component-index.mjs >/dev/null; then
+    echo "[pre-commit] build-component-index.mjs failed. Aborting commit." >&2
+    exit 1
+  fi
+  # Stage the regenerated artifacts so they ride this commit. The
+  # minified outputs (up.min.*) may not exist locally if esbuild isn't
+  # reachable; `git add` silently skips missing files thanks to the
+  # `--ignore-errors` wrapper below, so offline machines can still commit.
+  git add dist/up.js dist/up.css docs/COMPONENT-INDEX.md
+  git add --ignore-errors dist/up.min.js dist/up.min.js.map dist/up.min.css 2>/dev/null || true
+fi
+
+# Always parse-check the bundle. Cheap (~50 ms) and catches the kind of
+# IIFE-boundary regression that would otherwise ship live.
+for bundle in dist/up.js dist/up.min.js; do
+  if [ -f "$bundle" ]; then
+    if ! node -e "new Function(require('fs').readFileSync('$bundle','utf8'))" 2>/tmp/up-parse-err; then
+      echo "[pre-commit] $bundle failed to parse:" >&2
+      cat /tmp/up-parse-err >&2
+      exit 1
+    fi
+  fi
+done
+
+exit 0

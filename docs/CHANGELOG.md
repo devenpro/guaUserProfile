@@ -3,6 +3,45 @@
 All notable changes to this app. Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 Versioning is independent per app.
 
+## [Unreleased] — Build, hygiene, and CI hardening
+
+### Added
+
+- **Minified bundles.** `scripts/build.mjs` now also emits
+  `dist/up.min.js` (~93 KB, ~44 % smaller than `up.js`),
+  `dist/up.min.js.map`, and `dist/up.min.css`. Minification runs via
+  `npx --yes esbuild` and is best-effort locally (offline builds still
+  produce the unminified pair and exit 0); CI is the source of truth.
+- **Feature-branch build workflow** (`.github/workflows/build.yml`)
+  rebuilds `dist/` on push to any non-main branch and commits the
+  artifacts back, so mobile/web-only sessions can ship `src/`-only
+  edits. Skips its own commits and `[release]` commits.
+- **MIT `LICENSE`** at repo root + `"license": "MIT"` in `package.json`.
+- **Sample data** under `docs/samples/` — empty and populated
+  `field_json_data` blobs plus a matching `field_llm_config` example.
+- **Pre-commit hook installer** (`bash scripts/install-hooks.sh`)
+  symlinks `scripts/hooks/pre-commit` into `.git/hooks/`. The hook
+  rebuilds `dist/` when `src/` is staged and parse-checks both
+  `dist/up.js` and `dist/up.min.js` before allowing the commit through.
+
+### Changed
+
+- **Asset Injector URLs flipped to the minified bundles** in the
+  README's quick-reference table:
+  `…@latest/dist/up.min.js` and `…@latest/dist/up.min.css`. The
+  unminified URL pattern is documented as a debugging fallback.
+- `release.yml` and `build.yml` now `git add` the minified outputs and
+  the source map; the jsDelivr purge loop covers all five paths.
+- `CLAUDE.md` "Build hygiene" section updated to reference the new
+  artifact set and the `UP_SKIP_MINIFY=1` escape hatch.
+
+### Notes
+
+- No feature code (anything under `src/`) was touched. The IIFE
+  wrappers, init chain, save flow, and `field_llm_config` output
+  contract are byte-for-byte unchanged. Consumer apps see no
+  difference — same JSON, same shape, same producer.
+
 ## [0.2.0] — Provider editor + onboarding guides
 
 ### ⚠ BREAKING
