@@ -105,7 +105,7 @@ Source is split into per-section files under `src/`. Each Part is a single IIFE 
 | File | Role |
 |------|------|
 | `00-header.js` | IIFE open, version banner, `window._upRenderers` init |
-| `01-constants.js` | `APP_VIEWS`, `MODEL_CATALOG` (14 providers), `PROVIDER_ORDER`, `ACTIVITY_TYPES`, `CATEGORY_LABELS` |
+| `01-constants.js` | `APP_VIEWS`, `MODEL_CATALOG` (13 providers, each with `guide` block), `PROVIDER_ORDER`, `RECOMMENDED_ORDER`, `REMOVED_PROVIDERS`, `PROVIDER_EDITOR_HASH_PREFIX`, `ACTIVITY_TYPES`, `CATEGORY_LABELS` |
 | `02-state.js` | The `S` state object |
 | `03-init.js` | `isUPPage`, `Drupal.behaviors.upPart1`, `window.load` fallback, `init`, `parseUserData`, `detectDrupalForm`, `loadData` (with `S._rawDataEmpty` capture), `getDefaultData`, `migrateData` |
 | `04-maps.js` | `buildMaps` (rebuilds `providerMap`, counts, `activeProviders`) |
@@ -121,18 +121,19 @@ Source is split into per-section files under `src/`. Each Part is a single IIFE 
 | `14-toast.js` | `toast` notifications |
 | `15-exports.js` | `window._up*` exports (incl. `window._upSafeBlock`), IIFE close |
 
-### Part 2A — Provider configuration engine (`src/20-part2a/`, 9 files)
+### Part 2A — Provider configuration engine (`src/20-part2a/`, 10 files)
 
 | File | Role |
 |------|------|
 | `01-init.js` | IIFE open, var declarations, polling guard (10s timeout), `initPart2A` (wraps `setupPart2AEvents` in `safeBlock`) |
 | `02-modal-system.js` | `openModal`, `closeModal`, `openConfirmDialog`, `closeConfirmDialog` |
 | `03-undo-redo.js` | `snapshot`, `undo`, `redo` (max 50 stack entries) |
-| `04-provider-modal.js` | `openProviderModal` (3-step flow: key → models → params) |
-| `05-key-verify.js` | `buildTestRequest`, `verifyApiKey`, `quickTestConnection`, `testAllConnections` (4 test methods) |
-| `06-provider-crud.js` | `saveProviderFromModal`, `removeProvider`, `openAddCustomProviderModal` |
+| `04-provider-modal.js` | Shared form helpers (`renderModelSelectionList`, `renderParameterControls`) reused by the editor view. The modal-based configurator itself was removed in v0.2.0. |
+| `04b-provider-editor-view.js` | `renderProviderEditor`, `renderProviderGuide`, `setupProviderEditorEvents` — the full-page editor at `#provider/<id>` |
+| `05-key-verify.js` | `buildTestRequest`, `verifyApiKey`, `quickTestConnection`, `testAllConnections` (3 test methods: gemini, cohere, openai) |
+| `06-provider-crud.js` | `saveProviderFromEditor`, `removeProvider`, `openAddCustomProviderModal` |
 | `07-change-default.js` | `openChangeDefaultModal` and helpers |
-| `08-events.js` | `setupPart2AEvents` (14 delegated handlers for modal, verify, CRUD) |
+| `08-events.js` | `setupPart2AEvents` (delegated handlers for verify, CRUD, slider inputs) |
 | `09-exports.js` | `window._upPart2A` registry, IIFE close |
 
 ### Part 2B — Advanced features (`src/30-part2b/`, 9 files)
@@ -140,7 +141,7 @@ Source is split into per-section files under `src/`. Each Part is a single IIFE 
 | File | Role |
 |------|------|
 | `01-init.js` | IIFE open, var declarations, polling guard (15s timeout), `initPart2B` (wraps `setupPart2BEvents` and `setupKeyboardShortcuts` in `safeBlock`) |
-| `02-live-refresh.js` | `MODEL_LIST_ENDPOINTS`, `liveRefreshModels`, `parseModelList`, `guessCategory`, `mergeDiscoveredModels` (8 of 14 providers supported) |
+| `02-live-refresh.js` | `MODEL_LIST_ENDPOINTS`, `liveRefreshModels`, `parseModelList`, `guessCategory`, `mergeDiscoveredModels` (8 of 13 providers supported) |
 | `03-llm-config-preview.js` | `openLLMConfigPreview` modal |
 | `04-import-export.js` | `exportConfig`, `importConfig` (with key-masking option) |
 | `05-bulk-ops.js` | `enableAllModels`, `disableAllModels` per provider |
@@ -196,7 +197,9 @@ These are in-code constants/registries owned by this app:
 
 | Library | Location | Purpose |
 |---------|----------|---------|
-| `MODEL_CATALOG` | Part 1 §1, lines 46–199 | Spec for 14 built-in providers (label, icon, color, endpoint, test method, models) |
+| `MODEL_CATALOG` | Part 1 §1 in `01-constants.js` | Spec for 13 built-in providers (label, icon, color, endpoint, test method, free_tier, recommended_rank, guide, models) |
+| `RECOMMENDED_ORDER` | Part 1 §1 in `01-constants.js` | Provider ids promoted on the dashboard's Recommended Free Providers rail |
+| `REMOVED_PROVIDERS` | Part 1 §1 in `01-constants.js` | Retired provider ids (currently `claude`) — stripped from user data by `migrateData()` on next load |
 | `PROVIDER_ORDER` | Part 1 §1, line 202 | Canonical iteration order of catalog providers |
 | `APP_VIEWS` | Part 1 §1 | Routing + sidebar definition |
 | `ACTIVITY_TYPES` | Part 1 §1 | Icon + color per activity event type (8 types) |

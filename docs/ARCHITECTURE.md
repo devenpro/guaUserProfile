@@ -198,25 +198,45 @@ Changing this contract is a breaking change for every other app on the platform.
 
 ## 5. Provider Catalog (`MODEL_CATALOG`)
 
-14 built-in providers in `up-part1.js` §1:
+13 built-in providers in `src/10-part1/01-constants.js`:
 
 | Category | Providers |
 |----------|-----------|
-| Major (model providers) | Gemini, Claude, OpenAI, Grok, Perplexity, DeepSeek, Mistral, Cohere |
+| Major (model providers) | Gemini, OpenAI, Grok, Perplexity, DeepSeek, Mistral, Cohere |
 | Infrastructure (inference platforms) | Groq, GitHub Models, NVIDIA, Hugging Face, Together AI, OpenRouter |
 
-Each entry: `{ label, icon, category, desc, color, test_endpoint, test_method, models[] }`.
+> **Claude was removed in v0.2.0.** Anthropic's direct API requires the
+> `anthropic-dangerous-direct-browser-access` header and is unreliable
+> from browsers. Users who want Claude should route through OpenRouter
+> (`anthropic/claude-sonnet-4` is in the OpenRouter catalog). Existing
+> `claude` entries in user data are stripped by `migrateData()` on next
+> load.
 
-### Test methods (4 supported)
+Each entry: `{ label, icon, category, desc, color, test_endpoint, test_method, free_tier, recommended_rank, guide, models[] }`.
+
+### Recommended providers (`RECOMMENDED_ORDER`)
+
+A subset of the catalog promoted on the dashboard's "Recommended Free Providers" rail:
+
+```
+['gemini', 'groq', 'huggingface', 'openrouter', 'mistral', 'deepseek', 'together']
+```
+
+Order is hand-tuned by "easiest to start with a free key" — Gemini and Groq need no credit card; Hugging Face is a generous open-model hub; OpenRouter is the recommended path to Claude/GPT-4 for browser apps.
+
+### Provider guides (`MODEL_CATALOG[id].guide`)
+
+Each catalog entry includes a `guide` block consumed by the full-page provider editor (right column) and the dashboard Recommended rail (free-tier note only, truncated). Shape: `{ signup_url, key_url, key_format, free_tier, steps[], troubleshooting[] }`. See `components/exports/provider-guide.component.json` for the full contract.
+
+### Test methods (3 supported in v0.2.0)
 
 | Method | Auth scheme | Body shape |
 |--------|-------------|-----------|
 | `gemini` | Query string `?key=...` | `{ contents: [{role, parts:[{text}]}], generationConfig:{ maxOutputTokens } }` |
-| `claude` | Headers `x-api-key`, `anthropic-version`, `anthropic-dangerous-direct-browser-access` | `{ model, max_tokens, messages:[...] }` |
 | `cohere` | Bearer | `{ model, message, max_tokens }` (v2 endpoint) |
 | `openai` | Bearer | `{ model, max_tokens, messages:[...] }` |
 
-`openai` is the default fallback. Most providers (OpenAI-compatible, Grok, Perplexity, DeepSeek, Mistral, Groq, GitHub, NVIDIA, Hugging Face, Together, OpenRouter) use it. OpenRouter additionally adds `HTTP-Referer` + `X-Title` headers.
+`openai` is the default fallback. Most providers (OpenAI-compatible, Grok, Perplexity, DeepSeek, Mistral, Groq, GitHub, NVIDIA, Hugging Face, Together, OpenRouter) use it. OpenRouter additionally adds `HTTP-Referer` + `X-Title` headers. The `claude` test method was removed alongside the Claude provider in v0.2.0.
 
 ### Custom providers
 
@@ -224,8 +244,8 @@ Users can add providers not in the catalog. Custom providers:
 
 - Get `custom: true`, their own `test_endpoint`, `test_method` (defaults to `'openai'`), and a generated HSL color
 - Live alongside catalog providers in `S.data.providers[]`
-- Flow through every code path (modal, verify, export, refresh) **identically** to catalog providers
-- For the modal, `openProviderModal()` synthesizes a `catInfo` object from the provider's own fields (Part 2A lines 199–212)
+- Flow through every code path (editor, verify, export, refresh) **identically** to catalog providers
+- For the editor, `renderProviderEditor()` synthesises a `catInfo` object from the provider's own fields. The guide column falls back to a minimal "Custom provider" info card.
 - Can use Live Refresh if the endpoint exposes `/v1/models` — but custom providers are not in `MODEL_LIST_ENDPOINTS` so live refresh from the Models view is a no-op; the user gets an info toast.
 
 ---
@@ -329,7 +349,7 @@ GET /v1/models flow (8 providers supported):
     └─ Toast: "N new models discovered" or "Catalog up to date"
 ```
 
-Supported: openai, groq, mistral, together, openrouter, nvidia, deepseek, perplexity. The other 6 (gemini, claude, grok, github, cohere, huggingface) don't expose a public `/v1/models` endpoint in a compatible shape — Live Refresh on them shows an info toast and is a no-op.
+Supported: openai, groq, mistral, together, openrouter, nvidia, deepseek, perplexity. The other 5 (gemini, grok, github, cohere, huggingface) don't expose a public `/v1/models` endpoint in a compatible shape — Live Refresh on them shows an info toast and is a no-op.
 
 Newly discovered models are added with `source: 'live_refresh'` and `active: false` — the user must explicitly enable them.
 
