@@ -16,8 +16,11 @@ src/                  Source files. This is where you edit.
     20-part2/         CSS for modals, confirm dialogs, configuration steps, parameter controls
 
 dist/                 Build output. Committed so jsDelivr can serve it.
-  up.js               Single concatenated JS bundle (loaded by Drupal)
-  up.css              Single concatenated CSS bundle (loaded by Drupal)
+  up.js               Concatenated JS bundle, unminified (dev/debug)
+  up.css              Concatenated CSS bundle, unminified (dev/debug)
+  up.min.js           Minified JS bundle (loaded by Drupal in prod)
+  up.min.js.map       Source map for up.min.js (auto-loaded by DevTools)
+  up.min.css          Minified CSS bundle (loaded by Drupal in prod)
 
 components/           AI-friendliness schemas. One .component.json per view,
                       AI action, and data export. Drives docs/COMPONENT-INDEX.md.
@@ -44,7 +47,10 @@ node scripts/build.mjs
 npm run build
 ```
 
-The build is a simple alphabetical-walk concatenation — no bundler, no plugins, no transforms. File ordering is controlled by numeric prefixes on folder and file names. To reorder, rename.
+The build does two passes:
+
+1. **Concat** — `scripts/build.mjs` walks `src/` in alphabetical order and concatenates files into `dist/up.js` and `dist/up.css`. File ordering is controlled by numeric prefixes on folder and file names. To reorder, rename.
+2. **Minify** — the same script then invokes `npx --yes esbuild` to produce `dist/up.min.js` (with a `up.min.js.map` source map) and `dist/up.min.css`. Minification is best-effort locally: if esbuild can't be fetched (offline, no npm), the script warns and exits 0 with only the unminified bundles. CI (`release.yml`) always has network, so the released `dist/` always contains both pairs. To skip minification entirely (e.g., on a quick local edit), set `UP_SKIP_MINIFY=1`.
 
 Sample `field_json_data` / `field_llm_config` blobs live under [`docs/samples/`](docs/samples/) — useful when seeding a fresh Drupal node or when documenting the producer/consumer contract for sibling apps.
 
@@ -58,16 +64,18 @@ Configured via the Asset Injector module on the Drupal site. The Drupal admin po
 
 | Mode | URL pattern | Notes |
 | --- | --- | --- |
-| **Production** (recommended) | `…@latest/dist/up.{js,css}` | jsDelivr resolves `@latest` to the highest semver tag. CI auto-tags every push to `main`, so the live page picks up new releases automatically. |
-| **Pinned** (for rollback) | `…@vX.Y.Z/dist/up.{js,css}` | Tag URLs are immutable. Use during incident response when you need to freeze the live page on a known-good release. |
-| **Bleeding edge** | `…@main/dist/up.{js,css}` | Follows the branch tip. Mutable; jsDelivr caches it ~12 h. Use only for short-lived hotfixes before a release exists. |
+| **Production** (recommended) | `…@latest/dist/up.min.{js,css}` | jsDelivr resolves `@latest` to the highest semver tag. CI auto-tags every push to `main`, so the live page picks up new releases automatically. Minified bundle keeps payload small; DevTools auto-loads `up.min.js.map` for readable stack traces. |
+| **Pinned** (for rollback) | `…@vX.Y.Z/dist/up.min.{js,css}` | Tag URLs are immutable. Use during incident response when you need to freeze the live page on a known-good release. |
+| **Bleeding edge** | `…@main/dist/up.min.{js,css}` | Follows the branch tip. Mutable; jsDelivr caches it ~12 h. Use only for short-lived hotfixes before a release exists. |
 
 Full URL for production:
 
 ```
-https://cdn.jsdelivr.net/gh/devenpro/guaUserProfile@latest/dist/up.js
-https://cdn.jsdelivr.net/gh/devenpro/guaUserProfile@latest/dist/up.css
+https://cdn.jsdelivr.net/gh/devenpro/guaUserProfile@latest/dist/up.min.js
+https://cdn.jsdelivr.net/gh/devenpro/guaUserProfile@latest/dist/up.min.css
 ```
+
+> **Unminified for debugging.** Swap `up.min.js`/`up.min.css` for `up.js`/`up.css` in the Asset Injector URL to load the human-readable bundles. Useful during incident debugging if the source map alone isn't enough.
 
 ### Deploy flow
 
@@ -103,8 +111,8 @@ Use the console banner to pinpoint which layer is wrong. Open DevTools (F12) →
 2. **Banner shows an older version than expected.** It's a cache. In order:
    - Browser: hard-refresh (Ctrl+Shift+R / Cmd+Shift+R).
    - jsDelivr (if you must — `@latest` resolves instantly to new tags, but you can purge anyway):
-     `https://purge.jsdelivr.net/gh/devenpro/guaUserProfile@latest/dist/up.js`
-     `https://purge.jsdelivr.net/gh/devenpro/guaUserProfile@latest/dist/up.css`
+     `https://purge.jsdelivr.net/gh/devenpro/guaUserProfile@latest/dist/up.min.js`
+     `https://purge.jsdelivr.net/gh/devenpro/guaUserProfile@latest/dist/up.min.css`
    - Drupal: Configuration → Performance → Clear all caches.
 3. **Banner shows the right version, but the UI is blank.** It's a runtime bug, not a delivery problem. Look for `[UP] Could not find Drupal form fields` or other `[UP]` errors in the console. Until the source is fixed, pin Asset Injector to the previous `@vX.Y.Z` tag (see "Rollback in 30 seconds" above).
 

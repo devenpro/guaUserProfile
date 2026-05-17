@@ -41,14 +41,18 @@ jobs:
           echo "version=$new_version" >> "$GITHUB_OUTPUT"
           echo "tag=v$new_version"    >> "$GITHUB_OUTPUT"
 
-      - name: Build bundle
+      - name: Build bundle (incl. minified outputs)
+        # build.mjs runs esbuild via `npx --yes esbuild` — the GitHub
+        # runner has network + npm cache, so the minified bundles and
+        # sourcemap are always produced here. CI is the source of
+        # truth for dist/up.min.*; local builds are best-effort.
         run: node scripts/build.mjs
 
       - name: Commit, tag, push
         env:
           TAG: ${{ steps.bump.outputs.tag }}
         run: |
-          git add package.json dist/up.js dist/up.css
+          git add package.json dist/up.js dist/up.css dist/up.min.js dist/up.min.js.map dist/up.min.css
           git commit -m "[release] $TAG"
           git tag -a "$TAG" -m "$TAG"
           git push origin HEAD:main
@@ -77,7 +81,7 @@ jobs:
         # right after the release is published forces jsDelivr to fetch the
         # new tag on next request.
         run: |
-          for path in dist/up.js dist/up.css; do
+          for path in dist/up.js dist/up.css dist/up.min.js dist/up.min.js.map dist/up.min.css; do
             for ref in latest main; do
               url="https://purge.jsdelivr.net/gh/devenpro/guaUserProfile@${ref}/${path}"
               code=$(curl -sS -o /tmp/purge.out -w '%{http_code}' "$url" || echo "000")

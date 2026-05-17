@@ -86,6 +86,6 @@ jobs:
             echo "dist/ and component index unchanged — nothing to commit."
             exit 0
           fi
-          git add dist/up.js dist/up.css docs/COMPONENT-INDEX.md
+          git add dist/up.js dist/up.css dist/up.min.js dist/up.min.js.map dist/up.min.css docs/COMPONENT-INDEX.md
           git commit -m "[ci] rebuild dist from ${GITHUB_SHA::7}"
           git push origin HEAD:${GITHUB_REF#refs/heads/}
