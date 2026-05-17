@@ -28,11 +28,6 @@
         });
         break;
 
-      case 'claude':
-        headers = { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' };
-        body = JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 10, messages: [{ role: 'user', content: 'Hello' }] });
-        break;
-
       case 'cohere':
         headers = { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey };
         body = JSON.stringify({ model: 'command-r', message: 'Hello', max_tokens: 10 });
